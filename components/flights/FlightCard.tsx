@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import {
   ArrowRight,
@@ -36,8 +37,22 @@ type FlightCardProps = {
 };
 
 export default function FlightCard({ flight, index }: FlightCardProps) {
+  const router = useRouter();
+
+  const handleCardClick = () => {
+    router.push(`/flights/${flight.id}`);
+  };
+
   return (
     <motion.div
+      onClick={handleCardClick}
+      role="link"
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") {
+          handleCardClick();
+        }
+      }}
       initial={{ opacity: 0, y: 28 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{
@@ -45,7 +60,7 @@ export default function FlightCard({ flight, index }: FlightCardProps) {
         duration: 0.7,
         ease: "easeOut",
       }}
-      className="group relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.045] p-5 text-white shadow-2xl shadow-black/35 backdrop-blur-xl transition duration-500 hover:border-white/20 hover:bg-white/[0.07]"
+      className="group relative cursor-pointer overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.045] p-5 text-white shadow-2xl shadow-black/35 backdrop-blur-xl transition duration-500 hover:border-white/20 hover:bg-white/[0.07]"
     >
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.12] via-white/[0.025] to-transparent" />
       <div className="pointer-events-none absolute -right-24 -top-24 h-52 w-52 rounded-full bg-sky-500/10 blur-3xl transition duration-700 group-hover:bg-sky-400/15" />
@@ -150,7 +165,10 @@ export default function FlightCard({ flight, index }: FlightCardProps) {
             </p>
           </div>
 
-          <div className="flex gap-2.5">
+          <div
+            className="flex gap-2.5"
+            onClick={(event) => event.stopPropagation()}
+          >
             <Button
               asChild
               variant="outline"

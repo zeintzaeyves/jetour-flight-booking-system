@@ -1,5 +1,6 @@
 "use client";
 
+import type React from "react";
 import { motion } from "motion/react";
 import {
   BadgeCheck,
@@ -12,49 +13,16 @@ import {
   UsersRound,
 } from "lucide-react";
 
+import type { Flight } from "@/types/flight";
+
 type FlightDetailsCardProps = {
-  flightId: string;
+  flight: Flight;
 };
-
-const flightDetails = {
-  airline: "Jetour Airways",
-  flightNo: "JT-204",
-  origin: "Manila",
-  destination: "Tokyo",
-  originCode: "MNL",
-  destinationCode: "NRT",
-  departureDate: "May 24, 2026",
-  departureTime: "08:30 AM",
-  arrivalTime: "12:50 PM",
-  duration: "4h 20m",
-  classType: "Economy",
-  baggage: "20kg checked baggage",
-  passengers: "1 Guest",
-  aircraft: "Airbus A321neo",
-  status: "Available",
-};
-
-const timeline = [
-  {
-    label: "Departure",
-    airport: "Ninoy Aquino International Airport",
-    code: "MNL",
-    time: "08:30 AM",
-    date: "May 24, 2026",
-  },
-  {
-    label: "Arrival",
-    airport: "Narita International Airport",
-    code: "NRT",
-    time: "12:50 PM",
-    date: "May 24, 2026",
-  },
-];
 
 const inclusions = [
   {
     title: "Baggage included",
-    description: "20kg checked baggage with 7kg cabin allowance.",
+    description: "Checked baggage and cabin allowance included in this fare.",
     icon: Luggage,
   },
   {
@@ -69,7 +37,24 @@ const inclusions = [
   },
 ];
 
-export default function FlightDetailsCard({ flightId }: FlightDetailsCardProps) {
+export default function FlightDetailsCard({ flight }: FlightDetailsCardProps) {
+  const timeline = [
+    {
+      label: "Departure",
+      airport: `${flight.origin} Airport`,
+      code: flight.originCode,
+      time: flight.departureTime,
+      date: flight.departureDate,
+    },
+    {
+      label: "Arrival",
+      airport: `${flight.destination} Airport`,
+      code: flight.destinationCode,
+      time: flight.arrivalTime,
+      date: flight.departureDate,
+    },
+  ];
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 24 }}
@@ -90,29 +75,28 @@ export default function FlightDetailsCard({ flightId }: FlightDetailsCardProps) 
 
             <div>
               <h2 className="text-2xl font-semibold tracking-[-0.04em]">
-                {flightDetails.originCode} to {flightDetails.destinationCode}
+                {flight.originCode} to {flight.destinationCode}
               </h2>
               <p className="mt-1 text-sm text-white/45">
-                {flightDetails.airline} · {flightDetails.flightNo} · Ref{" "}
-                {flightId.toUpperCase()}
+                {flight.airline} · {flight.flightNo}
               </p>
             </div>
           </div>
 
           <div className="w-fit rounded-full border border-emerald-300/10 bg-emerald-400/10 px-4 py-2 text-sm text-emerald-200">
-            {flightDetails.status}
+            {flight.status}
           </div>
         </div>
 
         <div className="rounded-[1.75rem] border border-white/10 bg-black/20 p-5 backdrop-blur-xl">
           <div className="flex items-center justify-between gap-5">
             <div>
-              <p className="text-sm text-white/45">{flightDetails.origin}</p>
+              <p className="text-sm text-white/45">{flight.origin}</p>
               <h3 className="mt-1 text-5xl font-semibold tracking-[-0.06em]">
-                {flightDetails.originCode}
+                {flight.originCode}
               </h3>
               <p className="mt-2 text-sm text-white/55">
-                {flightDetails.departureTime}
+                {flight.departureTime}
               </p>
             </div>
 
@@ -124,14 +108,12 @@ export default function FlightDetailsCard({ flightId }: FlightDetailsCardProps) 
             </div>
 
             <div className="text-right">
-              <p className="text-sm text-white/45">
-                {flightDetails.destination}
-              </p>
+              <p className="text-sm text-white/45">{flight.destination}</p>
               <h3 className="mt-1 text-5xl font-semibold tracking-[-0.06em]">
-                {flightDetails.destinationCode}
+                {flight.destinationCode}
               </h3>
               <p className="mt-2 text-sm text-white/55">
-                {flightDetails.arrivalTime}
+                {flight.arrivalTime}
               </p>
             </div>
           </div>
@@ -141,22 +123,14 @@ export default function FlightDetailsCard({ flightId }: FlightDetailsCardProps) 
           <InfoPill
             icon={CalendarDays}
             label="Departure"
-            value={flightDetails.departureDate}
+            value={flight.departureDate}
           />
-          <InfoPill
-            icon={Clock3}
-            label="Duration"
-            value={flightDetails.duration}
-          />
-          <InfoPill
-            icon={Ticket}
-            label="Class"
-            value={flightDetails.classType}
-          />
+          <InfoPill icon={Clock3} label="Duration" value={flight.duration} />
+          <InfoPill icon={Ticket} label="Class" value={flight.classType} />
           <InfoPill
             icon={UsersRound}
-            label="Guest"
-            value={flightDetails.passengers}
+            label="Seats"
+            value={`${flight.availableSeats} available`}
           />
         </div>
 
@@ -170,12 +144,12 @@ export default function FlightDetailsCard({ flightId }: FlightDetailsCardProps) 
             </div>
 
             <div className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs text-white/60">
-              {flightDetails.aircraft}
+              {flight.tag}
             </div>
           </div>
 
           <div className="space-y-4">
-            {timeline.map((item, index) => (
+            {timeline.map((item) => (
               <div
                 key={item.label}
                 className="grid gap-4 rounded-[1.35rem] border border-white/10 bg-black/20 p-4 sm:grid-cols-[120px_1fr_auto] sm:items-center"
@@ -221,7 +195,9 @@ export default function FlightDetailsCard({ flightId }: FlightDetailsCardProps) 
                   {item.title}
                 </h4>
                 <p className="mt-2 text-sm leading-6 text-white/45">
-                  {item.description}
+                  {item.title === "Baggage included"
+                    ? `${flight.baggage} baggage allowance included in this fare.`
+                    : item.description}
                 </p>
               </div>
             );

@@ -16,24 +16,10 @@ import {
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import type { Flight } from "@/types/flight";
 
 type BookingSummaryProps = {
-  flightId: string;
-};
-
-const bookingSummary = {
-  route: "MNL → NRT",
-  airline: "Jetour Airways",
-  flightNo: "JT-204",
-  departureDate: "May 24, 2026",
-  departureTime: "08:30 AM",
-  passenger: "1 Guest",
-  cabinClass: "Economy",
-  baggage: "20kg included",
-  baseFare: "₱10,999",
-  taxes: "₱1,500",
-  serviceFee: "Included",
-  total: "₱12,499",
+  flight: Flight;
 };
 
 const inclusions = [
@@ -42,7 +28,7 @@ const inclusions = [
     icon: ShieldCheck,
   },
   {
-    label: "20kg baggage",
+    label: "Baggage included",
     icon: Luggage,
   },
   {
@@ -51,7 +37,10 @@ const inclusions = [
   },
 ];
 
-export default function BookingSummary({ flightId }: BookingSummaryProps) {
+export default function BookingSummary({ flight }: BookingSummaryProps) {
+  const taxes = Math.round(flight.price * 0.12);
+  const baseFare = flight.price - taxes;
+
   const handleConfirm = () => {
     toast.success("Booking confirmed. Redirecting to success page...");
   };
@@ -86,12 +75,12 @@ export default function BookingSummary({ flightId }: BookingSummaryProps) {
             <div>
               <p className="text-xs text-white/40">Selected flight</p>
               <p className="mt-1 text-lg font-semibold tracking-[-0.03em]">
-                {bookingSummary.route}
+                {flight.originCode} → {flight.destinationCode}
               </p>
             </div>
 
             <div className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs text-white/70">
-              {flightId.toUpperCase()}
+              {flight.flightNo}
             </div>
           </div>
 
@@ -99,30 +88,33 @@ export default function BookingSummary({ flightId }: BookingSummaryProps) {
             <SummaryItem
               icon={Plane}
               label="Airline"
-              value={`${bookingSummary.airline} · ${bookingSummary.flightNo}`}
+              value={`${flight.airline} · ${flight.flightNo}`}
             />
+
             <SummaryItem
               icon={CalendarDays}
               label="Departure"
-              value={`${bookingSummary.departureDate} · ${bookingSummary.departureTime}`}
+              value={`${flight.departureDate} · ${flight.departureTime}`}
             />
+
             <SummaryItem
               icon={UserRound}
               label="Passenger"
-              value={`${bookingSummary.passenger} · ${bookingSummary.cabinClass}`}
+              value={`1 Guest · ${flight.classType}`}
             />
+
             <SummaryItem
               icon={Luggage}
               label="Baggage"
-              value={bookingSummary.baggage}
+              value={`${flight.baggage} included`}
             />
           </div>
         </div>
 
         <div className="mt-4 space-y-3 rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-5 backdrop-blur-xl">
-          <FareRow label="Base fare" value={bookingSummary.baseFare} />
-          <FareRow label="Taxes & fees" value={bookingSummary.taxes} />
-          <FareRow label="Service fee" value={bookingSummary.serviceFee} />
+          <FareRow label="Base fare" value={`₱${baseFare.toLocaleString()}`} />
+          <FareRow label="Taxes & fees" value={`₱${taxes.toLocaleString()}`} />
+          <FareRow label="Service fee" value="Included" />
 
           <div className="h-px bg-white/10" />
 
@@ -133,7 +125,7 @@ export default function BookingSummary({ flightId }: BookingSummaryProps) {
             </div>
 
             <p className="text-3xl font-semibold tracking-[-0.05em]">
-              {bookingSummary.total}
+              ₱{flight.price.toLocaleString()}
             </p>
           </div>
         </div>
@@ -148,7 +140,9 @@ export default function BookingSummary({ flightId }: BookingSummaryProps) {
                 className="flex items-center gap-3 rounded-full border border-white/10 bg-white/10 px-4 py-3 text-sm text-white/65 backdrop-blur-xl"
               >
                 <Icon className="h-4 w-4 text-white/50" />
-                {item.label}
+                {item.label === "Baggage included"
+                  ? `${flight.baggage} baggage`
+                  : item.label}
               </div>
             );
           })}
@@ -173,10 +167,10 @@ export default function BookingSummary({ flightId }: BookingSummaryProps) {
           Save as pending
         </Button>
 
-        <div className="mt-5 rounded-[1.25rem] border border-white/10 bg-black/20 p-4">
-          <p className="text-xs leading-6 text-white/40">
-            This booking form is currently using static data. In the backend
-            phase, confirmation will create a booking document in MongoDB.
+        <div className="mt-5 rounded-[1.25rem] border border-emerald-300/10 bg-emerald-400/10 p-4">
+          <p className="text-xs leading-6 text-emerald-100/75">
+            This summary is now loaded from the Jetour flights database. Booking
+            submission will be connected to MongoDB next.
           </p>
         </div>
       </div>

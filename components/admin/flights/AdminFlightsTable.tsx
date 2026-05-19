@@ -1,12 +1,15 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   MoreHorizontal,
   Pencil,
   Plane,
+  RefreshCcw,
   Trash2,
   TicketCheck,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,66 +20,128 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const flights = [
-  {
-    id: "jt-204",
-    flightNo: "JT-204",
-    airline: "Jetour Airways",
-    route: "MNL → NRT",
-    origin: "Manila",
-    destination: "Tokyo",
-    departureDate: "May 24, 2026",
-    departureTime: "08:30 AM",
-    arrivalTime: "12:50 PM",
-    price: "₱12,499",
-    seats: 42,
-    status: "Scheduled",
-  },
-  {
-    id: "jt-118",
-    flightNo: "JT-118",
-    airline: "Jetour Airways",
-    route: "MNL → ICN",
-    origin: "Manila",
-    destination: "Seoul",
-    departureDate: "May 28, 2026",
-    departureTime: "10:15 AM",
-    arrivalTime: "02:10 PM",
-    price: "₱9,899",
-    seats: 36,
-    status: "Scheduled",
-  },
-  {
-    id: "jt-332",
-    flightNo: "JT-332",
-    airline: "Jetour Airways",
-    route: "CEB → SIN",
-    origin: "Cebu",
-    destination: "Singapore",
-    departureDate: "June 02, 2026",
-    departureTime: "06:20 PM",
-    arrivalTime: "09:55 PM",
-    price: "₱18,499",
-    seats: 18,
-    status: "Delayed",
-  },
-  {
-    id: "sm-409",
-    flightNo: "SM-409",
-    airline: "Sky Manila",
-    route: "CRK → BKK",
-    origin: "Clark",
-    destination: "Bangkok",
-    departureDate: "June 07, 2026",
-    departureTime: "07:45 AM",
-    arrivalTime: "10:50 AM",
-    price: "₱6,999",
-    seats: 12,
-    status: "Cancelled",
-  },
-];
+type Flight = {
+  _id: string;
+  flightNo: string;
+  airline: string;
+  origin: string;
+  destination: string;
+  originCode: string;
+  destinationCode: string;
+  departureDate: string;
+  departureTime: string;
+  arrivalTime: string;
+  duration: string;
+  classType: string;
+  baggage: string;
+  price: number;
+  availableSeats: number;
+  status: "Scheduled" | "Delayed" | "Cancelled" | "Completed";
+  tag: string;
+};
 
 export default function AdminFlightsTable() {
+  const [flights, setFlights] = useState<Flight[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchFlights = async () => {
+    try {
+      setIsLoading(true);
+
+      const response = await fetch("/api/flights", {
+        cache: "no-store",
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Failed to fetch flights.");
+      }
+
+      setFlights(result.data);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to load flights.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDelete = async (flightNo: string) => {
+    try {
+      const response = await fetch(`/api/flights/${flightNo}`, {
+        method: "DELETE",
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Failed to delete flight.");
+      }
+
+      toast.success(`${flightNo} deleted successfully.`);
+      fetchFlights();
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to delete flight.");
+    }
+  };
+
+  const handleMarkScheduled = async (flightNo: string) => {
+    try {
+      const response = await fetch(`/api/flights/${flightNo}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          status: "Scheduled",
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Failed to update flight.");
+      }
+
+      toast.success(`${flightNo} marked as scheduled.`);
+      fetchFlights();
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to update flight.");
+    }
+  };
+
+  useEffect(() => {
+    fetchFlights();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-8 text-center text-sm text-white/45">
+        Loading flight records...
+      </div>
+    );
+  }
+
+  if (flights.length === 0) {
+    return (
+      <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-8 text-center">
+        <p className="text-sm text-white/45">No flights found yet.</p>
+
+        <Button
+          onClick={fetchFlights}
+          variant="outline"
+          className="mt-4 rounded-full border-white/15 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+        >
+          <RefreshCcw className="mr-2 h-4 w-4" />
+          Refresh
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-hidden rounded-[1.5rem] border border-white/10 bg-black/20">
       <div className="hidden grid-cols-[1fr_1fr_1fr_0.8fr_0.7fr_0.8fr_auto] gap-4 border-b border-white/10 px-5 py-4 text-xs uppercase tracking-[0.18em] text-white/35 xl:grid">
@@ -92,7 +157,7 @@ export default function AdminFlightsTable() {
       <div className="divide-y divide-white/10">
         {flights.map((flight) => (
           <div
-            key={flight.id}
+            key={flight._id}
             className="grid gap-4 px-5 py-5 text-sm xl:grid-cols-[1fr_1fr_1fr_0.8fr_0.7fr_0.8fr_auto] xl:items-center"
           >
             <div className="flex items-center gap-3">
@@ -107,7 +172,9 @@ export default function AdminFlightsTable() {
             </div>
 
             <div>
-              <p className="font-medium text-white">{flight.route}</p>
+              <p className="font-medium text-white">
+                {flight.originCode} → {flight.destinationCode}
+              </p>
               <p className="mt-1 text-xs text-white/40">
                 {flight.origin} to {flight.destination}
               </p>
@@ -122,11 +189,13 @@ export default function AdminFlightsTable() {
 
             <div>
               <p className="text-white/80">{flight.arrivalTime}</p>
-              <p className="mt-1 text-xs text-white/40">{flight.price}</p>
+              <p className="mt-1 text-xs text-white/40">
+                ₱{flight.price.toLocaleString()}
+              </p>
             </div>
 
             <div>
-              <p className="font-medium text-white">{flight.seats}</p>
+              <p className="font-medium text-white">{flight.availableSeats}</p>
               <p className="mt-1 text-xs text-white/40">available</p>
             </div>
 
@@ -155,12 +224,18 @@ export default function AdminFlightsTable() {
                     Edit flight
                   </DropdownMenuItem>
 
-                  <DropdownMenuItem className="cursor-pointer focus:bg-white/10 focus:text-white">
+                  <DropdownMenuItem
+                    onClick={() => handleMarkScheduled(flight.flightNo)}
+                    className="cursor-pointer focus:bg-white/10 focus:text-white"
+                  >
                     <TicketCheck className="mr-2 h-4 w-4" />
                     Mark scheduled
                   </DropdownMenuItem>
 
-                  <DropdownMenuItem className="cursor-pointer text-red-300 focus:bg-red-400/10 focus:text-red-200">
+                  <DropdownMenuItem
+                    onClick={() => handleDelete(flight.flightNo)}
+                    className="cursor-pointer text-red-300 focus:bg-red-400/10 focus:text-red-200"
+                  >
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete flight
                   </DropdownMenuItem>
@@ -183,8 +258,10 @@ function StatusBadge({ status }: StatusBadgeProps) {
     status === "Scheduled"
       ? "border-emerald-300/10 bg-emerald-400/10 text-emerald-200 hover:bg-emerald-400/10"
       : status === "Delayed"
-      ? "border-amber-300/10 bg-amber-400/10 text-amber-200 hover:bg-amber-400/10"
-      : "border-red-300/10 bg-red-400/10 text-red-200 hover:bg-red-400/10";
+        ? "border-amber-300/10 bg-amber-400/10 text-amber-200 hover:bg-amber-400/10"
+        : status === "Completed"
+          ? "border-sky-300/10 bg-sky-400/10 text-sky-200 hover:bg-sky-400/10"
+          : "border-red-300/10 bg-red-400/10 text-red-200 hover:bg-red-400/10";
 
   return (
     <Badge className={`rounded-full border px-3 py-1 ${statusClass}`}>

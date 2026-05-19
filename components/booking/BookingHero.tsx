@@ -12,16 +12,17 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import type { Flight } from "@/types/flight";
 
 type BookingHeroProps = {
-  flightId: string;
+  flight: Flight;
 };
 
-export default function BookingHero({ flightId }: BookingHeroProps) {
+export default function BookingHero({ flight }: BookingHeroProps) {
   return (
     <section className="relative overflow-hidden bg-[#050706] px-4 pb-10 pt-32 text-white sm:px-6">
       <div className="pointer-events-none absolute left-1/2 top-0 h-[460px] w-[460px] -translate-x-1/2 rounded-full bg-sky-500/10 blur-[150px]" />
-      <div className="pointer-events-none absolute right-0 bottom-0 h-[360px] w-[360px] rounded-full bg-white/5 blur-[130px]" />
+      <div className="pointer-events-none absolute bottom-0 right-0 h-[360px] w-[360px] rounded-full bg-white/5 blur-[130px]" />
 
       <div className="relative mx-auto max-w-7xl">
         <motion.div
@@ -40,7 +41,7 @@ export default function BookingHero({ flightId }: BookingHeroProps) {
               variant="outline"
               className="mb-8 rounded-full border-white/15 bg-white/5 text-white hover:bg-white/10 hover:text-white"
             >
-              <Link href={`/flights/${flightId}`}>
+              <Link href={`/flights/${flight.flightNo}`}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to flight details
               </Link>
@@ -56,13 +57,14 @@ export default function BookingHero({ flightId }: BookingHeroProps) {
                 <h1 className="max-w-4xl text-5xl font-semibold tracking-[-0.07em] text-white md:text-7xl">
                   Complete your
                   <span className="block text-white/45">
-                    Jetour reservation.
+                    {flight.flightNo} reservation.
                   </span>
                 </h1>
 
                 <p className="mt-6 max-w-2xl text-base leading-8 text-white/50 md:text-lg">
-                  Enter passenger details, review your selected fare, and confirm
-                  your booking request through a smooth reservation flow.
+                  Enter passenger details, review your selected fare, and
+                  confirm your booking request for {flight.origin} to{" "}
+                  {flight.destination}.
                 </p>
               </div>
 
@@ -71,9 +73,9 @@ export default function BookingHero({ flightId }: BookingHeroProps) {
                   <div className="rounded-full border border-white/10 bg-white/10 px-5 py-3 backdrop-blur-xl">
                     <p className="text-xs text-white/40">Selected route</p>
                     <p className="mt-1 text-sm font-medium text-white">
-                      Manila{" "}
+                      {flight.origin}{" "}
                       <ArrowRight className="mx-1 inline h-3.5 w-3.5 text-white/45" />{" "}
-                      Tokyo
+                      {flight.destination}
                     </p>
                   </div>
 
@@ -82,8 +84,9 @@ export default function BookingHero({ flightId }: BookingHeroProps) {
                       <CalendarDays className="h-3.5 w-3.5" />
                       Departure
                     </div>
+
                     <p className="mt-1 text-sm font-medium text-white">
-                      May 24, 2026
+                      {flight.departureDate}
                     </p>
                   </div>
 
@@ -92,8 +95,9 @@ export default function BookingHero({ flightId }: BookingHeroProps) {
                       <Plane className="h-3.5 w-3.5" />
                       Flight
                     </div>
+
                     <p className="mt-1 text-sm font-medium text-white">
-                      {flightId.toUpperCase()}
+                      {flight.flightNo}
                     </p>
                   </div>
                 </div>
@@ -108,12 +112,12 @@ export default function BookingHero({ flightId }: BookingHeroProps) {
 
               <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs text-white/60 backdrop-blur-xl">
                 <Plane className="h-3.5 w-3.5" />
-                Flight details reviewed
+                {flight.originCode} → {flight.destinationCode}
               </span>
 
               <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs text-white/60 backdrop-blur-xl">
                 <CreditCard className="h-3.5 w-3.5" />
-                Payment mock for portfolio phase
+                ₱{flight.price.toLocaleString()}
               </span>
             </div>
           </div>

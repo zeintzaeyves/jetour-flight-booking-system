@@ -1,15 +1,24 @@
 "use client";
 
-import { Plus, Plane, CalendarDays, Clock3, MapPin, Ticket } from "lucide-react";
+import type React from "react";
+import { useState } from "react";
+import {
+  CalendarDays,
+  Clock3,
+  MapPin,
+  Plane,
+  Plus,
+  Ticket,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -23,14 +32,88 @@ import {
 } from "@/components/ui/select";
 
 export default function AdminFlightFormDialog() {
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const [open, setOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-    toast.success("Flight saved. Backend connection will be added later.");
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsSaving(true);
+
+    const formData = new FormData(event.currentTarget);
+
+    const payload = {
+      flightNo: String(formData.get("flightNo") || "").trim().toUpperCase(),
+      airline: String(formData.get("airline") || "Jetour Airways").trim(),
+      origin: String(formData.get("origin") || "").trim(),
+      destination: String(formData.get("destination") || "").trim(),
+      originCode: String(formData.get("originCode") || "").trim().toUpperCase(),
+      destinationCode: String(formData.get("destinationCode") || "")
+        .trim()
+        .toUpperCase(),
+      departureDate: String(formData.get("departureDate") || ""),
+      departureTime: String(formData.get("departureTime") || ""),
+      arrivalTime: String(formData.get("arrivalTime") || ""),
+      duration: String(formData.get("duration") || "").trim(),
+      classType: String(formData.get("classType") || "Economy"),
+      baggage: String(formData.get("baggage") || "20kg").trim(),
+      price: Number(formData.get("price")),
+      availableSeats: Number(formData.get("availableSeats")),
+      status: String(formData.get("status") || "Scheduled"),
+      tag: String(formData.get("tag") || "Available").trim(),
+    };
+
+    if (
+      !payload.flightNo ||
+      !payload.origin ||
+      !payload.destination ||
+      !payload.originCode ||
+      !payload.destinationCode ||
+      !payload.departureDate ||
+      !payload.departureTime ||
+      !payload.arrivalTime ||
+      !payload.duration ||
+      !payload.price ||
+      Number.isNaN(payload.price) ||
+      Number.isNaN(payload.availableSeats)
+    ) {
+      toast.error("Please complete all required flight fields.");
+      setIsSaving(false);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/flights", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Failed to create flight.");
+      }
+
+      toast.success(`${payload.flightNo} created successfully.`);
+      setOpen(false);
+
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    } catch (error) {
+      console.error(error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to create flight."
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button className="h-12 rounded-full px-6">
           <Plus className="mr-2 h-4 w-4" />
@@ -43,9 +126,10 @@ export default function AdminFlightFormDialog() {
           <DialogTitle className="text-3xl font-semibold tracking-[-0.05em]">
             Add new flight
           </DialogTitle>
+
           <DialogDescription className="text-white/45">
-            Create a static flight record for now. Later, this form will submit
-            to the MongoDB flights collection.
+            Create a new flight record and save it directly to the Jetour
+            database.
           </DialogDescription>
         </DialogHeader>
 
@@ -59,17 +143,18 @@ export default function AdminFlightFormDialog() {
               <div>
                 <h3 className="font-medium text-white">Flight identity</h3>
                 <p className="text-sm text-white/40">
-                  Airline, flight number, and current status.
+                  Airline, flight number, tag, and current status.
                 </p>
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2">
               <Field label="Flight number" htmlFor="flightNo">
                 <Input
                   id="flightNo"
                   name="flightNo"
-                  placeholder="JT-204"
+                  required
+                  placeholder="JT-520"
                   className="h-12 rounded-full border-white/10 bg-white/10 px-5 text-white placeholder:text-white/35 focus-visible:ring-white/20"
                 />
               </Field>
@@ -78,21 +163,33 @@ export default function AdminFlightFormDialog() {
                 <Input
                   id="airline"
                   name="airline"
+                  required
+                  defaultValue="Jetour Airways"
                   placeholder="Jetour Airways"
                   className="h-12 rounded-full border-white/10 bg-white/10 px-5 text-white placeholder:text-white/35 focus-visible:ring-white/20"
                 />
               </Field>
 
+              <Field label="Tag" htmlFor="tag">
+                <Input
+                  id="tag"
+                  name="tag"
+                  defaultValue="Available"
+                  placeholder="Popular"
+                  className="h-12 rounded-full border-white/10 bg-white/10 px-5 text-white placeholder:text-white/35 focus-visible:ring-white/20"
+                />
+              </Field>
+
               <Field label="Status" htmlFor="status">
-                <Select name="status" defaultValue="scheduled">
+                <Select name="status" defaultValue="Scheduled">
                   <SelectTrigger className="h-12 rounded-full border-white/10 bg-white/10 px-5 text-white focus:ring-white/20">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="scheduled">Scheduled</SelectItem>
-                    <SelectItem value="delayed">Delayed</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="Scheduled">Scheduled</SelectItem>
+                    <SelectItem value="Delayed">Delayed</SelectItem>
+                    <SelectItem value="Cancelled">Cancelled</SelectItem>
+                    <SelectItem value="Completed">Completed</SelectItem>
                   </SelectContent>
                 </Select>
               </Field>
@@ -118,6 +215,7 @@ export default function AdminFlightFormDialog() {
                 <Input
                   id="origin"
                   name="origin"
+                  required
                   placeholder="Manila"
                   className="h-12 rounded-full border-white/10 bg-white/10 px-5 text-white placeholder:text-white/35 focus-visible:ring-white/20"
                 />
@@ -127,6 +225,7 @@ export default function AdminFlightFormDialog() {
                 <Input
                   id="destination"
                   name="destination"
+                  required
                   placeholder="Tokyo"
                   className="h-12 rounded-full border-white/10 bg-white/10 px-5 text-white placeholder:text-white/35 focus-visible:ring-white/20"
                 />
@@ -136,7 +235,9 @@ export default function AdminFlightFormDialog() {
                 <Input
                   id="originCode"
                   name="originCode"
+                  required
                   placeholder="MNL"
+                  maxLength={3}
                   className="h-12 rounded-full border-white/10 bg-white/10 px-5 text-white placeholder:text-white/35 focus-visible:ring-white/20"
                 />
               </Field>
@@ -145,7 +246,9 @@ export default function AdminFlightFormDialog() {
                 <Input
                   id="destinationCode"
                   name="destinationCode"
+                  required
                   placeholder="NRT"
+                  maxLength={3}
                   className="h-12 rounded-full border-white/10 bg-white/10 px-5 text-white placeholder:text-white/35 focus-visible:ring-white/20"
                 />
               </Field>
@@ -172,6 +275,7 @@ export default function AdminFlightFormDialog() {
                   id="departureDate"
                   name="departureDate"
                   type="date"
+                  required
                   className="h-12 rounded-full border-white/10 bg-white/10 px-5 text-white placeholder:text-white/35 focus-visible:ring-white/20"
                 />
               </Field>
@@ -181,6 +285,7 @@ export default function AdminFlightFormDialog() {
                   id="departureTime"
                   name="departureTime"
                   type="time"
+                  required
                   className="h-12 rounded-full border-white/10 bg-white/10 px-5 text-white placeholder:text-white/35 focus-visible:ring-white/20"
                 />
               </Field>
@@ -190,6 +295,7 @@ export default function AdminFlightFormDialog() {
                   id="arrivalTime"
                   name="arrivalTime"
                   type="time"
+                  required
                   className="h-12 rounded-full border-white/10 bg-white/10 px-5 text-white placeholder:text-white/35 focus-visible:ring-white/20"
                 />
               </Field>
@@ -198,6 +304,7 @@ export default function AdminFlightFormDialog() {
                 <Input
                   id="duration"
                   name="duration"
+                  required
                   placeholder="4h 20m"
                   className="h-12 rounded-full border-white/10 bg-white/10 px-5 text-white placeholder:text-white/35 focus-visible:ring-white/20"
                 />
@@ -224,7 +331,10 @@ export default function AdminFlightFormDialog() {
                 <Input
                   id="price"
                   name="price"
-                  placeholder="₱12,499"
+                  type="number"
+                  required
+                  min={1}
+                  placeholder="12499"
                   className="h-12 rounded-full border-white/10 bg-white/10 px-5 text-white placeholder:text-white/35 focus-visible:ring-white/20"
                 />
               </Field>
@@ -234,22 +344,24 @@ export default function AdminFlightFormDialog() {
                   id="availableSeats"
                   name="availableSeats"
                   type="number"
+                  required
+                  min={0}
                   placeholder="42"
                   className="h-12 rounded-full border-white/10 bg-white/10 px-5 text-white placeholder:text-white/35 focus-visible:ring-white/20"
                 />
               </Field>
 
               <Field label="Class type" htmlFor="classType">
-                <Select name="classType" defaultValue="economy">
+                <Select name="classType" defaultValue="Economy">
                   <SelectTrigger className="h-12 rounded-full border-white/10 bg-white/10 px-5 text-white focus:ring-white/20">
                     <SelectValue placeholder="Select class" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="economy">Economy</SelectItem>
-                    <SelectItem value="premium-economy">
+                    <SelectItem value="Economy">Economy</SelectItem>
+                    <SelectItem value="Premium Economy">
                       Premium Economy
                     </SelectItem>
-                    <SelectItem value="business">Business</SelectItem>
+                    <SelectItem value="Business">Business</SelectItem>
                   </SelectContent>
                 </Select>
               </Field>
@@ -258,6 +370,7 @@ export default function AdminFlightFormDialog() {
                 <Input
                   id="baggage"
                   name="baggage"
+                  defaultValue="20kg"
                   placeholder="20kg"
                   className="h-12 rounded-full border-white/10 bg-white/10 px-5 text-white placeholder:text-white/35 focus-visible:ring-white/20"
                 />
@@ -268,14 +381,16 @@ export default function AdminFlightFormDialog() {
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
             <Button
               type="button"
+              disabled={isSaving}
+              onClick={() => setOpen(false)}
               variant="outline"
               className="h-12 rounded-full border-white/15 bg-white/5 px-6 text-white hover:bg-white/10 hover:text-white"
             >
               Cancel
             </Button>
 
-            <Button type="submit" className="h-12 rounded-full px-6">
-              Save Flight
+            <Button type="submit" disabled={isSaving} className="h-12 rounded-full px-6">
+              {isSaving ? "Saving..." : "Save Flight"}
             </Button>
           </div>
         </form>

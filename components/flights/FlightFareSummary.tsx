@@ -13,21 +13,15 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import type { Flight } from "@/types/flight";
 
 type FlightFareSummaryProps = {
-  flightId: string;
-};
-
-const fareDetails = {
-  baseFare: "₱10,999",
-  taxes: "₱1,500",
-  serviceFee: "Included",
-  total: "₱12,499",
+  flight: Flight;
 };
 
 const fareBenefits = [
   {
-    label: "20kg baggage",
+    label: "Baggage included",
     icon: Luggage,
   },
   {
@@ -40,7 +34,15 @@ const fareBenefits = [
   },
 ];
 
-export default function FlightFareSummary({ flightId }: FlightFareSummaryProps) {
+export default function FlightFareSummary({ flight }: FlightFareSummaryProps) {
+  const taxes = Math.round(flight.price * 0.12);
+  const baseFare = flight.price - taxes;
+  const total = flight.price;
+
+  const formattedBaseFare = `₱${baseFare.toLocaleString()}`;
+  const formattedTaxes = `₱${taxes.toLocaleString()}`;
+  const formattedTotal = `₱${total.toLocaleString()}`;
+
   return (
     <motion.aside
       initial={{ opacity: 0, y: 24 }}
@@ -72,21 +74,42 @@ export default function FlightFareSummary({ flightId }: FlightFareSummaryProps) 
           <div className="mt-3 flex items-center justify-between gap-4">
             <div>
               <p className="text-lg font-semibold tracking-[-0.03em]">
-                MNL → NRT
+                {flight.originCode} → {flight.destinationCode}
               </p>
-              <p className="mt-1 text-sm text-white/45">Jetour Airways</p>
+              <p className="mt-1 text-sm text-white/45">
+                {flight.airline} · {flight.flightNo}
+              </p>
             </div>
 
             <div className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs text-white/70">
-              {flightId.toUpperCase()}
+              {flight.status}
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-2 text-xs text-white/45">
+            <div className="flex items-center justify-between gap-3">
+              <span>Departure</span>
+              <span className="text-white/75">{flight.departureDate}</span>
+            </div>
+
+            <div className="flex items-center justify-between gap-3">
+              <span>Time</span>
+              <span className="text-white/75">
+                {flight.departureTime} → {flight.arrivalTime}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between gap-3">
+              <span>Class</span>
+              <span className="text-white/75">{flight.classType}</span>
             </div>
           </div>
         </div>
 
         <div className="mt-4 space-y-3 rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-5 backdrop-blur-xl">
-          <FareRow label="Base fare" value={fareDetails.baseFare} />
-          <FareRow label="Taxes & fees" value={fareDetails.taxes} />
-          <FareRow label="Service fee" value={fareDetails.serviceFee} />
+          <FareRow label="Base fare" value={formattedBaseFare} />
+          <FareRow label="Taxes & fees" value={formattedTaxes} />
+          <FareRow label="Service fee" value="Included" />
 
           <div className="h-px bg-white/10" />
 
@@ -97,7 +120,7 @@ export default function FlightFareSummary({ flightId }: FlightFareSummaryProps) 
             </div>
 
             <p className="text-3xl font-semibold tracking-[-0.05em]">
-              {fareDetails.total}
+              {formattedTotal}
             </p>
           </div>
         </div>
@@ -112,14 +135,16 @@ export default function FlightFareSummary({ flightId }: FlightFareSummaryProps) 
                 className="flex items-center gap-3 rounded-full border border-white/10 bg-white/10 px-4 py-3 text-sm text-white/65 backdrop-blur-xl"
               >
                 <Icon className="h-4 w-4 text-white/50" />
-                {benefit.label}
+                {benefit.label === "Baggage included"
+                  ? `${flight.baggage} baggage`
+                  : benefit.label}
               </div>
             );
           })}
         </div>
 
-        <Button asChild className="mt-5 h-13 w-full rounded-full text-sm">
-          <Link href={`/booking/${flightId}`}>
+        <Button asChild className="mt-5 h-12 w-full rounded-full text-sm">
+          <Link href={`/booking/${flight.flightNo}`}>
             Continue booking
             <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
@@ -137,8 +162,7 @@ export default function FlightFareSummary({ flightId }: FlightFareSummaryProps) 
           <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0" />
 
           <p className="text-xs leading-6 text-emerald-100/75">
-            This is a portfolio booking flow. Payment integration will be added
-            later during backend phase.
+            This fare is now loaded from the Jetour flights database.
           </p>
         </div>
       </div>

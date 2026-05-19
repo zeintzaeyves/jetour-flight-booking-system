@@ -11,12 +11,13 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import type { Flight } from "@/types/flight";
 
 type FlightDetailsHeroProps = {
-  flightId: string;
+  flight: Flight;
 };
 
-export default function FlightDetailsHero({ flightId }: FlightDetailsHeroProps) {
+export default function FlightDetailsHero({ flight }: FlightDetailsHeroProps) {
   return (
     <section className="relative overflow-hidden bg-[#050706] px-4 pb-10 pt-32 text-white sm:px-6">
       <div className="pointer-events-none absolute left-1/2 top-0 h-[460px] w-[460px] -translate-x-1/2 rounded-full bg-sky-500/10 blur-[150px]" />
@@ -53,9 +54,9 @@ export default function FlightDetailsHero({ flightId }: FlightDetailsHeroProps) 
                 </div>
 
                 <h1 className="max-w-4xl text-5xl font-semibold tracking-[-0.07em] text-white md:text-7xl">
-                  Jetour Airways
+                  {flight.airline}
                   <span className="block text-white/45">
-                    {flightId.toUpperCase()}
+                    {flight.flightNo}
                   </span>
                 </h1>
 
@@ -70,9 +71,9 @@ export default function FlightDetailsHero({ flightId }: FlightDetailsHeroProps) 
                   <div className="rounded-full border border-white/10 bg-white/10 px-5 py-3 backdrop-blur-xl">
                     <p className="text-xs text-white/40">Route</p>
                     <p className="mt-1 text-sm font-medium text-white">
-                      Manila{" "}
+                      {flight.origin}{" "}
                       <ArrowRight className="mx-1 inline h-3.5 w-3.5 text-white/45" />{" "}
-                      Tokyo
+                      {flight.destination}
                     </p>
                   </div>
 
@@ -82,7 +83,7 @@ export default function FlightDetailsHero({ flightId }: FlightDetailsHeroProps) 
                       Date
                     </div>
                     <p className="mt-1 text-sm font-medium text-white">
-                      May 24
+                      {flight.departureDate}
                     </p>
                   </div>
 
@@ -92,7 +93,7 @@ export default function FlightDetailsHero({ flightId }: FlightDetailsHeroProps) 
                       Duration
                     </div>
                     <p className="mt-1 text-sm font-medium text-white">
-                      4h 20m
+                      {flight.duration}
                     </p>
                   </div>
                 </div>

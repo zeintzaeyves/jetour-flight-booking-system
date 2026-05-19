@@ -1,15 +1,17 @@
 "use client";
 
+import type React from "react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import {
-  Mail,
-  Phone,
-  UserRound,
-  MessageSquareText,
-  Plane,
-  UsersRound,
   BadgeCheck,
+  Mail,
+  MessageSquareText,
+  Phone,
+  Plane,
+  UserRound,
+  UsersRound,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -30,16 +32,58 @@ type PassengerFormProps = {
 };
 
 export default function PassengerForm({ flightId }: PassengerFormProps) {
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsSubmitting(true);
 
-    setTimeout(() => {
+    const formData = new FormData(event.currentTarget);
+
+    const payload = {
+      flightNo: flightId,
+      fullName: String(formData.get("fullName") || "").trim(),
+      email: String(formData.get("email") || "").trim(),
+      phone: String(formData.get("phone") || "").trim(),
+      passengers: Number(formData.get("passengers") || 1),
+      classType: String(formData.get("classType") || "Economy"),
+      seatPreference: String(formData.get("seatPreference") || "Window seat"),
+      specialRequest: String(formData.get("specialRequest") || "").trim(),
+    };
+
+    if (!payload.fullName || !payload.email || !payload.phone) {
+      toast.error("Please complete your passenger details.");
       setIsSubmitting(false);
-      toast.success("Booking details saved. Ready for confirmation.");
-    }, 900);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/bookings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Failed to create booking.");
+      }
+
+      toast.success("Booking confirmed.");
+
+      router.push(`/booking/success?ref=${result.data.bookingReference}`);
+    } catch (error) {
+      console.error(error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to create booking."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -59,7 +103,7 @@ export default function PassengerForm({ flightId }: PassengerFormProps) {
           <div>
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs text-white/60 backdrop-blur-xl">
               <Plane className="h-3.5 w-3.5" />
-              {flightId.toUpperCase()}
+              {flightId}
             </div>
 
             <h2 className="text-3xl font-semibold tracking-[-0.05em]">
@@ -67,8 +111,8 @@ export default function PassengerForm({ flightId }: PassengerFormProps) {
             </h2>
 
             <p className="mt-2 max-w-2xl text-sm leading-6 text-white/45">
-              Add your contact and passenger details. This will be connected to
-              the bookings database in the backend phase.
+              Add your contact and passenger details. This will now save a real
+              booking record in MongoDB.
             </p>
           </div>
 
@@ -78,11 +122,7 @@ export default function PassengerForm({ flightId }: PassengerFormProps) {
         </div>
 
         <div className="grid gap-5 md:grid-cols-2">
-          <FormField
-            icon={UserRound}
-            label="Full name"
-            htmlFor="fullName"
-          >
+          <FormField icon={UserRound} label="Full name" htmlFor="fullName">
             <Input
               id="fullName"
               name="fullName"
@@ -128,28 +168,30 @@ export default function PassengerForm({ flightId }: PassengerFormProps) {
           </FormField>
 
           <FormField icon={BadgeCheck} label="Cabin class" htmlFor="classType">
-            <Select name="classType" defaultValue="economy">
+            <Select name="classType" defaultValue="Economy">
               <SelectTrigger className="h-12 rounded-full border-white/10 bg-white/10 px-5 text-white focus:ring-white/20">
                 <SelectValue placeholder="Select cabin class" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="economy">Economy</SelectItem>
-                <SelectItem value="premium-economy">Premium Economy</SelectItem>
-                <SelectItem value="business">Business</SelectItem>
+                <SelectItem value="Economy">Economy</SelectItem>
+                <SelectItem value="Premium Economy">Premium Economy</SelectItem>
+                <SelectItem value="Business">Business</SelectItem>
               </SelectContent>
             </Select>
           </FormField>
 
-          <FormField icon={Plane} label="Seat preference" htmlFor="seat">
-            <Select name="seat" defaultValue="window">
+          <FormField icon={Plane} label="Seat preference" htmlFor="seatPreference">
+            <Select name="seatPreference" defaultValue="Window seat">
               <SelectTrigger className="h-12 rounded-full border-white/10 bg-white/10 px-5 text-white focus:ring-white/20">
                 <SelectValue placeholder="Select seat preference" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="window">Window seat</SelectItem>
-                <SelectItem value="aisle">Aisle seat</SelectItem>
-                <SelectItem value="middle">Middle seat</SelectItem>
-                <SelectItem value="any">Any available seat</SelectItem>
+                <SelectItem value="Window seat">Window seat</SelectItem>
+                <SelectItem value="Aisle seat">Aisle seat</SelectItem>
+                <SelectItem value="Middle seat">Middle seat</SelectItem>
+                <SelectItem value="Any available seat">
+                  Any available seat
+                </SelectItem>
               </SelectContent>
             </Select>
           </FormField>
@@ -172,7 +214,7 @@ export default function PassengerForm({ flightId }: PassengerFormProps) {
 
         <div className="mt-6 flex flex-col gap-3 border-t border-white/10 pt-5 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm leading-6 text-white/40">
-            Your booking will be saved as a pending reservation until confirmed.
+            Your booking will be saved as a confirmed reservation.
           </p>
 
           <Button
@@ -180,7 +222,7 @@ export default function PassengerForm({ flightId }: PassengerFormProps) {
             disabled={isSubmitting}
             className="h-12 rounded-full px-7"
           >
-            {isSubmitting ? "Saving details..." : "Save passenger details"}
+            {isSubmitting ? "Confirming booking..." : "Confirm booking"}
           </Button>
         </div>
       </div>
