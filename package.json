@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
+    "check:case": "node scripts/check-case.mjs",
     "test:e2e": "node e2e/run.mjs",
     "test:a11y": "node e2e/a11y.mjs",
     "test:perf": "node e2e/perf.mjs",

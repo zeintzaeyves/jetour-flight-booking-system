@@ -17,6 +17,8 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+      - name: File-name case check (Linux is case-sensitive)
+        run: npm run check:case
       - run: npm test
       - name: Production audit
         run: npm audit --omit=dev --audit-level=high
