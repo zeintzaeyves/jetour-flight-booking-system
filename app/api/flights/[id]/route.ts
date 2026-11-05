@@ -1,144 +1,76 @@
 import mongoose from "mongoose";
-import { NextResponse } from "next/server";
 
+import { requireAdmin } from "@/lib/auth/admin";
+import { ApiError, handleError, ok } from "@/lib/api/response";
 import { connectDB } from "@/lib/mongodb";
+import { flightPatchSchema } from "@/lib/validation/flight";
+import Booking from "@/models/Booking";
 import Flight from "@/models/Flight";
 
-type RouteContext = {
-  params: Promise<{
-    id: string;
-  }>;
-};
+type RouteContext = { params: Promise<{ id: string }> };
 
 function buildFlightQuery(id: string) {
-  const normalizedId = id.toUpperCase();
-
-  if (mongoose.Types.ObjectId.isValid(id)) {
-    return {
-      $or: [{ _id: id }, { flightNo: normalizedId }],
-    };
-  }
-
-  return {
-    flightNo: normalizedId,
-  };
+  const flightNo = id.toUpperCase();
+  return mongoose.Types.ObjectId.isValid(id)
+    ? { $or: [{ _id: id }, { flightNo }] }
+    : { flightNo };
 }
+
+const notFound = () =>
+  new ApiError(404, "FLIGHT_NOT_FOUND", "Flight not found.");
 
 export async function GET(_request: Request, context: RouteContext) {
   try {
     await connectDB();
-
     const { id } = await context.params;
-
     const flight = await Flight.findOne(buildFlightQuery(id));
-
-    if (!flight) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Flight not found.",
-        },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json(
-      {
-        success: true,
-        data: flight,
-      },
-      { status: 200 }
-    );
+    if (!flight) throw notFound();
+    return ok(flight);
   } catch (error) {
-    console.error("GET_FLIGHT_ERROR:", error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to fetch flight.",
-      },
-      { status: 500 }
-    );
+    return handleError(error, "GET_FLIGHT_ERROR");
   }
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
   try {
-    await connectDB();
-
+    await requireAdmin();
     const { id } = await context.params;
-    const body = await request.json();
-
-    const flight = await Flight.findOneAndUpdate(buildFlightQuery(id), body, {
+    const patch = flightPatchSchema.parse(await request.json());
+    await connectDB();
+    const flight = await Flight.findOneAndUpdate(buildFlightQuery(id), patch, {
       new: true,
       runValidators: true,
     });
-
-    if (!flight) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Flight not found.",
-        },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json(
-      {
-        success: true,
-        message: "Flight updated successfully.",
-        data: flight,
-      },
-      { status: 200 }
-    );
+    if (!flight) throw notFound();
+    return ok(flight, 200, "Flight updated successfully.");
   } catch (error) {
-    console.error("UPDATE_FLIGHT_ERROR:", error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to update flight.",
-      },
-      { status: 500 }
-    );
+    return handleError(error, "UPDATE_FLIGHT_ERROR");
   }
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {
   try {
+    await requireAdmin();
     await connectDB();
-
     const { id } = await context.params;
-
-    const flight = await Flight.findOneAndDelete(buildFlightQuery(id));
-
-    if (!flight) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Flight not found.",
-        },
-        { status: 404 }
+    const existing = await Flight.findOne(buildFlightQuery(id));
+    if (!existing) throw notFound();
+    // Never orphan live reservations.
+    const active = await Booking.countDocuments({
+      flightNo: existing.flightNo,
+      status: { $ne: "Cancelled" },
+    });
+    if (active > 0) {
+      throw new ApiError(
+        409,
+        "FLIGHT_HAS_BOOKINGS",
+        `This flight has ${active} active booking${active === 1 ? "" : "s"}. Cancel them first, or mark the flight Cancelled instead of deleting it.`
       );
     }
-
-    return NextResponse.json(
-      {
-        success: true,
-        message: "Flight deleted successfully.",
-      },
-      { status: 200 }
-    );
+    const flight = await Flight.findOneAndDelete({ _id: existing._id });
+    if (!flight) throw notFound();
+    return ok(null, 200, "Flight deleted successfully.");
   } catch (error) {
-    console.error("DELETE_FLIGHT_ERROR:", error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to delete flight.",
-      },
-      { status: 500 }
-    );
+    return handleError(error, "DELETE_FLIGHT_ERROR");
   }
 }

@@ -1,23 +1,40 @@
-import HeroSection from "@/components/home/HeroSection";
-import PopularDestinations from "@/components/home/PopularDestinations";
-import FeaturedFlightDeals from "@/components/home/FeaturedFlightDeals";
-import HowJetourWorks from "@/components/home/HowJetourWorks";
-import AdminCMSPreview from "@/components/home/AdminCMSPreview";
-import FinalCTA from "@/components/home/FinalCTA";
-import CreatorCredit from "@/components/home/CreatorCredit";
+import Cabins from "@/components/home/Cabins";
+import Faq from "@/components/home/Faq";
+import FeaturedFares from "@/components/home/FeaturedFares";
+import FinalCta from "@/components/home/FinalCta";
+import Hero from "@/components/home/Hero";
+import HowItWorks from "@/components/home/HowItWorks";
+import NetworkStats from "@/components/home/NetworkStats";
+import PopularRoutes from "@/components/home/PopularRoutes";
+import WhyJetour from "@/components/home/WhyJetour";
 import Footer from "@/components/layout/Footer";
+import { getNetworkSummary } from "@/lib/flights/service";
 
-export default function Home() {
+// Refresh live fares and routes at most every 5 minutes.
+export const revalidate = 300;
+
+export default async function Home() {
+  const network = await getNetworkSummary();
+  const airports = [
+    ...new Map(
+      [...network.origins, ...network.destinations].map((a) => [a.code, a])
+    ).values(),
+  ].sort((a, b) => a.city.localeCompare(b.city));
+
   return (
-    <main className="min-h-screen bg-[#050706]">
-      <HeroSection />
-      <PopularDestinations />
-      <FeaturedFlightDeals />
-      <HowJetourWorks />
-      <AdminCMSPreview />
-      <FinalCTA />
-      <CreatorCredit />
+    <>
+      <main>
+        <Hero airports={airports} />
+        <NetworkStats network={network} />
+        <PopularRoutes network={network} />
+        <FeaturedFares flights={network.cheapest} />
+        <WhyJetour />
+        <Cabins />
+        <HowItWorks />
+        <Faq />
+        <FinalCta />
+      </main>
       <Footer />
-    </main>
+    </>
   );
 }

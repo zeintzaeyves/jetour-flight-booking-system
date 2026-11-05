@@ -94,11 +94,32 @@ const FlightSchema = new Schema(
       type: String,
       default: "Available",
     },
+
+    // Additive fields (see scripts/migrate-additive.mjs). Optional so existing
+    // documents stay valid.
+    stops: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    departureAt: {
+      type: Date,
+    },
+
+    // Set by scripts/seed-demo.mjs so sample flights are always identifiable.
+    isDemo: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
   }
 );
+
+FlightSchema.index({ originCode: 1, destinationCode: 1, departureDate: 1 });
+FlightSchema.index({ departureAt: 1 });
 
 const Flight = models.Flight || mongoose.model("Flight", FlightSchema);
 

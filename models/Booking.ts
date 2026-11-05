@@ -90,11 +90,26 @@ const BookingSchema = new Schema(
       enum: ["Pending", "Confirmed", "Cancelled"],
       default: "Pending",
     },
+
+    // Additive: names of travellers other than the lead passenger.
+    additionalPassengers: {
+      type: [String],
+      default: [],
+    },
+
+    idempotencyKey: {
+      type: String,
+      trim: true,
+    },
   },
   {
     timestamps: true,
   }
 );
+
+BookingSchema.index({ idempotencyKey: 1 }, { unique: true, sparse: true });
+BookingSchema.index({ email: 1, bookingReference: 1 });
+BookingSchema.index({ flightId: 1 });
 
 const Booking = models.Booking || mongoose.model("Booking", BookingSchema);
 

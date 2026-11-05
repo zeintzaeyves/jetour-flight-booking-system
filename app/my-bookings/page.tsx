@@ -1,24 +1,34 @@
-import MyBookingsHero from "@/components/my-bookings/MyBookingsHero";
-import BookingLookupCard from "@/components/my-bookings/BookingLookupCard";
-import BookingStatusPreview from "@/components/my-bookings/BookingStatusPreview";
+import type { Metadata } from "next";
+
+import { Container, PageHeader } from "@/components/layout/Container";
 import Footer from "@/components/layout/Footer";
+import ManageBooking from "@/components/my-bookings/ManageBooking";
 
-export default function MyBookingsPage() {
+export const metadata: Metadata = {
+  title: "Manage booking",
+  robots: { index: false },
+};
+
+type PageProps = { searchParams: Promise<{ ref?: string }> };
+
+export default async function MyBookingsPage({ searchParams }: PageProps) {
+  const { ref } = await searchParams;
+  // Only the reference is ever prefilled from the URL, never the email.
+  const initialReference = (typeof ref === "string" ? ref : "").slice(0, 30).toUpperCase();
+
   return (
-    <main className="min-h-screen bg-[#050706]">
-      <MyBookingsHero />
-
-      <section className="relative overflow-hidden bg-[#050706] px-4 pb-28 pt-8 text-white sm:px-6">
-        <div className="pointer-events-none absolute left-0 top-20 h-[420px] w-[420px] rounded-full bg-sky-500/10 blur-[140px]" />
-        <div className="pointer-events-none absolute bottom-0 right-0 h-[380px] w-[380px] rounded-full bg-white/5 blur-[130px]" />
-
-        <div className="relative mx-auto grid max-w-7xl gap-5 lg:grid-cols-[minmax(0,1fr)_420px]">
-          <BookingLookupCard />
-          <BookingStatusPreview />
-        </div>
-      </section>
-
+    <>
+      <main className="min-h-screen bg-surface pb-20 pt-28">
+        <Container className="max-w-3xl space-y-8">
+          <PageHeader
+            eyebrow="Manage booking"
+            title="Find your reservation"
+            description="Enter your booking reference and the email you booked with to view details or cancel."
+          />
+          <ManageBooking initialReference={initialReference} />
+        </Container>
+      </main>
       <Footer />
-    </main>
+    </>
   );
 }

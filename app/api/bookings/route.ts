@@ -1,99 +1,36 @@
-import { NextResponse } from "next/server";
-
+import { requireAdmin } from "@/lib/auth/admin";
+import { handleError, ok } from "@/lib/api/response";
+import { enforceRateLimit } from "@/lib/rateLimit";
+import { toPublicBooking } from "@/lib/bookings/serialize";
+import { createBooking } from "@/lib/bookings/service";
 import { connectDB } from "@/lib/mongodb";
+import { bookingInputSchema } from "@/lib/validation/booking";
 import Booking from "@/models/Booking";
-import Flight from "@/models/Flight";
 
-function generateBookingReference() {
-  const randomNumber = Math.floor(1000 + Math.random() * 9000);
-
-  return `JT-BKG-${randomNumber}`;
-}
-
+// Admin only: contains passenger personal data.
 export async function GET() {
   try {
+    await requireAdmin();
     await connectDB();
-
     const bookings = await Booking.find().sort({ createdAt: -1 });
-
-    return NextResponse.json(
-      {
-        success: true,
-        data: bookings,
-      },
-      { status: 200 }
-    );
+    return ok(bookings);
   } catch (error) {
-    console.error("GET_BOOKINGS_ERROR:", error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to fetch bookings.",
-      },
-      { status: 500 }
-    );
+    return handleError(error, "GET_BOOKINGS_ERROR");
   }
 }
 
 export async function POST(request: Request) {
   try {
-    await connectDB();
-
-    const body = await request.json();
-
-    const flight = await Flight.findOne({
-      flightNo: String(body.flightNo).toUpperCase(),
-    });
-
-    if (!flight) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Selected flight was not found.",
-        },
-        { status: 404 }
-      );
-    }
-
-    const passengers = Number(body.passengers || 1);
-    const totalAmount = flight.price * passengers;
-
-    const booking = await Booking.create({
-      bookingReference: generateBookingReference(),
-      flightNo: flight.flightNo,
-      flightId: flight._id,
-      fullName: body.fullName,
-      email: body.email,
-      phone: body.phone,
-      passengers,
-      classType: body.classType || flight.classType,
-      seatPreference: body.seatPreference || "Window seat",
-      specialRequest: body.specialRequest || "",
-      route: `${flight.originCode} → ${flight.destinationCode}`,
-      departureDate: flight.departureDate,
-      departureTime: flight.departureTime,
-      totalAmount,
-      status: "Confirmed",
-    });
-
-    return NextResponse.json(
-      {
-        success: true,
-        message: "Booking created successfully.",
-        data: booking,
-      },
-      { status: 201 }
+    // Abuse guard: 20 booking attempts per IP per hour.
+    await enforceRateLimit(request, "booking", 20, 60 * 60);
+    const input = bookingInputSchema.parse(await request.json());
+    const { booking, created } = await createBooking(input);
+    return ok(
+      toPublicBooking(booking),
+      created ? 201 : 200,
+      created ? "Booking created successfully." : "Booking already exists."
     );
   } catch (error) {
-    console.error("CREATE_BOOKING_ERROR:", error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to create booking.",
-      },
-      { status: 500 }
-    );
+    return handleError(error, "CREATE_BOOKING_ERROR");
   }
 }

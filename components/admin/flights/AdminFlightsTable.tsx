@@ -1,271 +1,150 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  MoreHorizontal,
-  Pencil,
-  Plane,
-  RefreshCcw,
-  Trash2,
-  TicketCheck,
-} from "lucide-react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { Badge } from "@/components/ui/badge";
+import { adminRequest } from "@/components/admin/api";
+import FlightFormDialog from "@/components/admin/flights/FlightFormDialog";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { NativeSelect } from "@/components/ui/native-select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { formatPeso } from "@/lib/format";
+import { FLIGHT_STATUSES } from "@/lib/validation/flight";
+import type { Flight } from "@/types/flight";
 
-type Flight = {
-  _id: string;
-  flightNo: string;
-  airline: string;
-  origin: string;
-  destination: string;
-  originCode: string;
-  destinationCode: string;
-  departureDate: string;
-  departureTime: string;
-  arrivalTime: string;
-  duration: string;
-  classType: string;
-  baggage: string;
-  price: number;
-  availableSeats: number;
-  status: "Scheduled" | "Delayed" | "Cancelled" | "Completed";
-  tag: string;
-};
+export default function AdminFlightsTable({ flights }: { flights: Flight[] }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState<string | null>(null);
+  const [toDelete, setToDelete] = useState<Flight | null>(null);
 
-export default function AdminFlightsTable() {
-  const [flights, setFlights] = useState<Flight[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  async function setStatus(f: Flight, status: string) {
+    setBusy(f.flightNo);
+    const r = await adminRequest(`/api/flights/${encodeURIComponent(f.flightNo)}`, "PATCH", { status });
+    setBusy(null);
+    if (r.ok) {
+      toast.success(
+        status === "Cancelled"
+          ? `${f.flightNo} marked Cancelled. Existing bookings are not cancelled automatically.`
+          : `${f.flightNo} is now ${status}.`
+      );
+      router.refresh();
+    } else if (r.status === 401) router.replace("/admin/login");
+    else toast.error(r.message);
+  }
 
-  const fetchFlights = async () => {
-    try {
-      setIsLoading(true);
-
-      const response = await fetch("/api/flights", {
-        cache: "no-store",
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || "Failed to fetch flights.");
-      }
-
-      setFlights(result.data);
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to load flights.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDelete = async (flightNo: string) => {
-    try {
-      const response = await fetch(`/api/flights/${flightNo}`, {
-        method: "DELETE",
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || "Failed to delete flight.");
-      }
-
-      toast.success(`${flightNo} deleted successfully.`);
-      fetchFlights();
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to delete flight.");
-    }
-  };
-
-  const handleMarkScheduled = async (flightNo: string) => {
-    try {
-      const response = await fetch(`/api/flights/${flightNo}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          status: "Scheduled",
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || "Failed to update flight.");
-      }
-
-      toast.success(`${flightNo} marked as scheduled.`);
-      fetchFlights();
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to update flight.");
-    }
-  };
-
-  useEffect(() => {
-    fetchFlights();
-  }, []);
-
-  if (isLoading) {
-    return (
-      <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-8 text-center text-sm text-white/45">
-        Loading flight records...
-      </div>
-    );
+  async function remove(f: Flight) {
+    setBusy(f.flightNo);
+    const r = await adminRequest(`/api/flights/${encodeURIComponent(f.flightNo)}`, "DELETE");
+    setBusy(null);
+    setToDelete(null);
+    if (r.ok) {
+      toast.success(`${f.flightNo} deleted.`);
+      router.refresh();
+    } else if (r.status === 401) router.replace("/admin/login");
+    else toast.error(r.message);
   }
 
   if (flights.length === 0) {
     return (
-      <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-8 text-center">
-        <p className="text-sm text-white/45">No flights found yet.</p>
-
-        <Button
-          onClick={fetchFlights}
-          variant="outline"
-          className="mt-4 rounded-full border-white/15 bg-white/5 text-white hover:bg-white/10 hover:text-white"
-        >
-          <RefreshCcw className="mr-2 h-4 w-4" />
-          Refresh
-        </Button>
-      </div>
+      <p className="rounded-[1.75rem] border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground">
+        No flights yet. Add your first flight to start taking bookings.
+      </p>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-[1.5rem] border border-white/10 bg-black/20">
-      <div className="hidden grid-cols-[1fr_1fr_1fr_0.8fr_0.7fr_0.8fr_auto] gap-4 border-b border-white/10 px-5 py-4 text-xs uppercase tracking-[0.18em] text-white/35 xl:grid">
-        <span>Flight</span>
-        <span>Route</span>
-        <span>Departure</span>
-        <span>Arrival</span>
-        <span>Seats</span>
-        <span>Status</span>
-        <span className="text-right">Actions</span>
+    <>
+      <div className="overflow-x-auto rounded-[1.75rem] border border-border bg-card shadow-card">
+        <Table className="min-w-[56rem]">
+          <TableHeader>
+            <TableRow>
+              <TableHead>Flight</TableHead>
+              <TableHead>Route</TableHead>
+              <TableHead>Departure</TableHead>
+              <TableHead className="text-right">Seats</TableHead>
+              <TableHead className="text-right">Price</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {flights.map((f) => (
+              <TableRow key={f._id}>
+                <TableCell>
+                  <div className="font-medium">{f.flightNo}</div>
+                  <div className="text-xs text-muted-foreground">{f.airline} · {f.classType}</div>
+                </TableCell>
+                <TableCell>{f.originCode} → {f.destinationCode}</TableCell>
+                <TableCell>
+                  <div>{f.departureDate}</div>
+                  <div className="text-xs text-muted-foreground">{f.departureTime} → {f.arrivalTime}</div>
+                </TableCell>
+                <TableCell className="text-right tabular-nums">{f.availableSeats}</TableCell>
+                <TableCell className="text-right tabular-nums">{formatPeso(f.price)}</TableCell>
+                <TableCell className="w-40">
+                  <NativeSelect
+                    aria-label={`Status of ${f.flightNo}`}
+                    value={f.status}
+                    disabled={busy === f.flightNo}
+                    onChange={(e) => setStatus(f, e.target.value)}
+                    className="h-9 text-sm"
+                  >
+                    {FLIGHT_STATUSES.map((s) => <option key={s}>{s}</option>)}
+                  </NativeSelect>
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-1">
+                    <FlightFormDialog flight={f}>
+                      <Button variant="ghost" size="icon-sm" aria-label={`Edit ${f.flightNo}`}>
+                        <Pencil aria-hidden />
+                      </Button>
+                    </FlightFormDialog>
+                    <Button variant="ghost" size="icon-sm" aria-label={`Delete ${f.flightNo}`} onClick={() => setToDelete(f)}>
+                      <Trash2 aria-hidden />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
 
-      <div className="divide-y divide-white/10">
-        {flights.map((flight) => (
-          <div
-            key={flight._id}
-            className="grid gap-4 px-5 py-5 text-sm xl:grid-cols-[1fr_1fr_1fr_0.8fr_0.7fr_0.8fr_auto] xl:items-center"
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-black shadow-xl shadow-black/20">
-                <Plane className="h-4 w-4" />
-              </div>
-
-              <div>
-                <p className="font-medium text-white">{flight.flightNo}</p>
-                <p className="mt-1 text-xs text-white/40">{flight.airline}</p>
-              </div>
-            </div>
-
-            <div>
-              <p className="font-medium text-white">
-                {flight.originCode} → {flight.destinationCode}
-              </p>
-              <p className="mt-1 text-xs text-white/40">
-                {flight.origin} to {flight.destination}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-white/80">{flight.departureDate}</p>
-              <p className="mt-1 text-xs text-white/40">
-                {flight.departureTime}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-white/80">{flight.arrivalTime}</p>
-              <p className="mt-1 text-xs text-white/40">
-                ₱{flight.price.toLocaleString()}
-              </p>
-            </div>
-
-            <div>
-              <p className="font-medium text-white">{flight.availableSeats}</p>
-              <p className="mt-1 text-xs text-white/40">available</p>
-            </div>
-
-            <div>
-              <StatusBadge status={flight.status} />
-            </div>
-
-            <div className="flex justify-start xl:justify-end">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    className="rounded-full border-white/15 bg-white/5 text-white hover:bg-white/10 hover:text-white"
-                  >
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-
-                <DropdownMenuContent
-                  align="end"
-                  className="border-white/10 bg-[#0b0f13] text-white"
-                >
-                  <DropdownMenuItem className="cursor-pointer focus:bg-white/10 focus:text-white">
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Edit flight
-                  </DropdownMenuItem>
-
-                  <DropdownMenuItem
-                    onClick={() => handleMarkScheduled(flight.flightNo)}
-                    className="cursor-pointer focus:bg-white/10 focus:text-white"
-                  >
-                    <TicketCheck className="mr-2 h-4 w-4" />
-                    Mark scheduled
-                  </DropdownMenuItem>
-
-                  <DropdownMenuItem
-                    onClick={() => handleDelete(flight.flightNo)}
-                    className="cursor-pointer text-red-300 focus:bg-red-400/10 focus:text-red-200"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete flight
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-type StatusBadgeProps = {
-  status: string;
-};
-
-function StatusBadge({ status }: StatusBadgeProps) {
-  const statusClass =
-    status === "Scheduled"
-      ? "border-emerald-300/10 bg-emerald-400/10 text-emerald-200 hover:bg-emerald-400/10"
-      : status === "Delayed"
-        ? "border-amber-300/10 bg-amber-400/10 text-amber-200 hover:bg-amber-400/10"
-        : status === "Completed"
-          ? "border-sky-300/10 bg-sky-400/10 text-sky-200 hover:bg-sky-400/10"
-          : "border-red-300/10 bg-red-400/10 text-red-200 hover:bg-red-400/10";
-
-  return (
-    <Badge className={`rounded-full border px-3 py-1 ${statusClass}`}>
-      {status}
-    </Badge>
+      <Dialog open={toDelete !== null} onOpenChange={(o) => !o && setToDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete {toDelete?.flightNo}?</DialogTitle>
+            <DialogDescription>
+              This permanently removes the flight. Flights with active bookings can&apos;t be deleted. Mark them
+              Cancelled instead.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild><Button variant="outline">Keep</Button></DialogClose>
+            <Button variant="destructive" disabled={busy !== null} onClick={() => toDelete && remove(toDelete)}>
+              Delete flight
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
