@@ -1,3 +1,4 @@
+import BookingTicket from "@/components/booking/BookingTicket";
 import { StatusBadge } from "@/components/ui/status-badge";
 import type { PublicBooking } from "@/lib/bookings/serialize";
 import { normalizeDate } from "@/lib/flights/search";
@@ -25,6 +26,9 @@ export default function BookingDetails({
   const cancelled = booking.status === "Cancelled";
 
   return (
+    <div className="space-y-8">
+    {/* A ticket exists only once the booking is confirmed. */}
+    {booking.status === "Confirmed" ? <BookingTicket booking={booking} /> : null}
     <section
       aria-label={`Booking ${booking.bookingReference}`}
       className="rounded-[1.75rem] border border-border bg-card shadow-card"
@@ -82,5 +86,6 @@ export default function BookingDetails({
 
       {actions ? <div className="border-t border-border p-5 sm:p-6">{actions}</div> : null}
     </section>
+    </div>
   );
 }
