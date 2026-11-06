@@ -9,7 +9,7 @@ import { AiClientError, postAi } from "@/components/ai/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { NativeSelect } from "@/components/ui/native-select";
+import { SelectMenu } from "@/components/ui/select-menu";
 import { CABINS, TIME_BUCKETS, toQueryString, type SearchParams } from "@/lib/flights/search";
 import { formatPeso } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -147,14 +147,13 @@ export default function NlSearchBar({ className }: { className?: string }) {
               ).map(([key, label]) => (
                 <div key={key} className={field}>
                   <Label htmlFor={`${id}-${key}`}>{label}</Label>
-                  <NativeSelect id={`${id}-${key}`} value={draft[key] ?? ""} onChange={(e) => set(key, e.target.value || undefined)}>
-                    <option value="">Anywhere</option>
-                    {airports.map((a) => (
-                      <option key={a.code} value={a.code}>
-                        {a.city} ({a.code})
-                      </option>
-                    ))}
-                  </NativeSelect>
+                  <SelectMenu
+                    id={`${id}-${key}`}
+                    value={draft[key] ?? ""}
+                    onChange={(v) => set(key, v || undefined)}
+                    placeholder="Anywhere"
+                    options={[{ value: "", label: "Anywhere" }, ...airports.map((a) => ({ value: a.code, label: `${a.city} (${a.code})` }))]}
+                  />
                 </div>
               ))}
               <div className={field}>
@@ -167,33 +166,30 @@ export default function NlSearchBar({ className }: { className?: string }) {
               </div>
               <div className={field}>
                 <Label htmlFor={`${id}-pax`}>Passengers</Label>
-                <NativeSelect id={`${id}-pax`} value={draft.passengers} onChange={(e) => set("passengers", Number(e.target.value))}>
-                  {Array.from({ length: 9 }, (_, i) => i + 1).map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </NativeSelect>
+                <SelectMenu
+                  id={`${id}-pax`}
+                  value={String(draft.passengers)}
+                  onChange={(v) => set("passengers", Number(v))}
+                  options={Array.from({ length: 9 }, (_, i) => i + 1).map((n) => ({ value: String(n), label: String(n) }))}
+                />
               </div>
               <div className={field}>
                 <Label htmlFor={`${id}-cabin`}>Cabin</Label>
-                <NativeSelect id={`${id}-cabin`} value={draft.cabin ?? ""} onChange={(e) => set("cabin", (e.target.value || undefined) as SearchParams["cabin"])}>
-                  <option value="">Any</option>
-                  {CABINS.map((c) => (
-                    <option key={c}>{c}</option>
-                  ))}
-                </NativeSelect>
+                <SelectMenu
+                  id={`${id}-cabin`}
+                  value={draft.cabin ?? ""}
+                  onChange={(v) => set("cabin", (v || undefined) as SearchParams["cabin"])}
+                  options={[{ value: "", label: "Any" }, ...CABINS.map((c) => ({ value: c, label: c }))]}
+                />
               </div>
               <div className={field}>
                 <Label htmlFor={`${id}-time`}>Departure time</Label>
-                <NativeSelect id={`${id}-time`} value={draft.depart ?? ""} onChange={(e) => set("depart", (e.target.value || undefined) as SearchParams["depart"])}>
-                  <option value="">Any time</option>
-                  {TIME_BUCKETS.map((t) => (
-                    <option key={t} value={t}>
-                      {t[0].toUpperCase() + t.slice(1)}
-                    </option>
-                  ))}
-                </NativeSelect>
+                <SelectMenu
+                  id={`${id}-time`}
+                  value={draft.depart ?? ""}
+                  onChange={(v) => set("depart", (v || undefined) as SearchParams["depart"])}
+                  options={[{ value: "", label: "Any time" }, ...TIME_BUCKETS.map((t) => ({ value: t, label: t[0].toUpperCase() + t.slice(1) }))]}
+                />
               </div>
               <div className={field}>
                 <Label htmlFor={`${id}-max`}>Max fare (₱)</Label>

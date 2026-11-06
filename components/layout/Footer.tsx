@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { Container } from "@/components/layout/Container";
 import { Button } from "@/components/ui/button";
+import { CREATOR } from "@/lib/site";
 
 const SOCIAL = [
   { label: "Instagram", href: "https://www.instagram.com/zeintzaeyves/" },
@@ -17,6 +18,7 @@ const COLUMNS = [
       { label: "Destinations", href: "/#destinations" },
       { label: "Cabins", href: "/#cabins" },
       { label: "FAQ", href: "/#faq" },
+      { label: "How it's built", href: "/how-its-built" },
     ],
   },
   {
@@ -90,7 +92,33 @@ export default function Footer() {
           </nav>
         </div>
 
-        <div className="mt-14 flex flex-col gap-2 border-t border-white/10 py-6 text-sm text-foreground/55 sm:flex-row sm:justify-between">
+        {/* Creator credit: the "flex" strip for people who open the site from a portfolio. */}
+        <div className="mt-14 flex flex-col gap-5 rounded-[1.75rem] border border-border bg-card p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+          <div>
+            <p className="text-eyebrow text-brand-ink">Designed &amp; built by</p>
+            <p className="text-title mt-2">{CREATOR.name}</p>
+            <p className="mt-1 text-sm text-foreground/65">
+              UI/UX design, frontend and backend. Next.js, TypeScript, MongoDB.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Button asChild variant="default" size="sm">
+              <Link href="/how-its-built">How it&apos;s built</Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <a href={CREATOR.linkedin} target="_blank" rel="noopener noreferrer">
+                LinkedIn
+              </a>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <a href={CREATOR.github} target="_blank" rel="noopener noreferrer">
+                GitHub
+              </a>
+            </Button>
+          </div>
+        </div>
+
+        <div className="mt-8 flex flex-col gap-2 border-t border-white/10 py-6 text-sm text-foreground/55 sm:flex-row sm:justify-between">
           <p>© 2026 Zein Khalid Bulaclac. All rights reserved.</p>
           <p>Demo project: sample flights and fares. Payments are simulated.</p>
         </div>

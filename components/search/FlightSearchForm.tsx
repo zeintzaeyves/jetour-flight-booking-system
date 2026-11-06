@@ -7,7 +7,7 @@ import { ArrowLeftRight, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
-import { NativeSelect } from "@/components/ui/native-select";
+import { SelectMenu } from "@/components/ui/select-menu";
 import { CABINS } from "@/lib/flights/search";
 import {
   buildSearchHref,
@@ -73,6 +73,7 @@ export default function FlightSearchForm({
 
   const options = airports.length ? airports : FALLBACK_AIRPORTS;
   const compact = variant === "compact";
+  const airportOptions = options.map((a) => ({ value: a.code, label: `${a.city} (${a.code})` }));
 
 
   const set = <K extends keyof SearchFormValues>(k: K, v: SearchFormValues[K]) => {
@@ -186,19 +187,14 @@ export default function FlightSearchForm({
           </div>
           {/* The select's own box is the positioning context, so the button is centred on it exactly. */}
           <div className="relative">
-            <NativeSelect
+            <SelectMenu
               id={id("from")}
               value={values.from}
-              onChange={(e) => set("from", e.target.value)}
+              onChange={(v) => set("from", v)}
+              placeholder="Select origin"
+              options={airportOptions}
               {...a11y("from", "from")}
-            >
-              <option value="">Select origin</option>
-              {options.map((a) => (
-                <option key={a.code} value={a.code}>
-                  {a.city} ({a.code})
-                </option>
-              ))}
-            </NativeSelect>
+            />
             {/* Centred in the pair gutter, with 0.375rem of clear space on each side. */}
             <button
               type="button"
@@ -217,19 +213,14 @@ export default function FlightSearchForm({
 
         <div>
           <Label htmlFor={id("to")} className="mb-1.5">To</Label>
-          <NativeSelect
+          <SelectMenu
             id={id("to")}
             value={values.to}
-            onChange={(e) => set("to", e.target.value)}
+            onChange={(v) => set("to", v)}
+            placeholder="Select destination"
+            options={airportOptions}
             {...a11y("to", "to")}
-          >
-            <option value="">Select destination</option>
-            {options.map((a) => (
-              <option key={a.code} value={a.code}>
-                {a.city} ({a.code})
-              </option>
-            ))}
-          </NativeSelect>
+          />
           {fieldError("to", "to")}
         </div>
         </div>
@@ -266,33 +257,25 @@ export default function FlightSearchForm({
 
         <div>
           <Label htmlFor={id("passengers")} className="mb-1.5">Passengers</Label>
-          <NativeSelect
+          <SelectMenu
             id={id("passengers")}
-            value={values.passengers}
-            onChange={(e) => set("passengers", Number(e.target.value))}
-          >
-            {Array.from({ length: 9 }, (_, i) => i + 1).map((n) => (
-              <option key={n} value={n}>
-                {n} {n === 1 ? "passenger" : "passengers"}
-              </option>
-            ))}
-          </NativeSelect>
+            value={String(values.passengers)}
+            onChange={(v) => set("passengers", Number(v))}
+            options={Array.from({ length: 9 }, (_, i) => i + 1).map((n) => ({
+              value: String(n),
+              label: `${n} ${n === 1 ? "passenger" : "passengers"}`,
+            }))}
+          />
         </div>
 
         <div>
           <Label htmlFor={id("cabin")} className="mb-1.5">Cabin</Label>
-          <NativeSelect
+          <SelectMenu
             id={id("cabin")}
             value={values.cabin}
-            onChange={(e) => set("cabin", e.target.value)}
-          >
-            <option value="">Any cabin</option>
-            {CABINS.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </NativeSelect>
+            onChange={(v) => set("cabin", v)}
+            options={[{ value: "", label: "Any cabin" }, ...CABINS.map((c) => ({ value: c, label: c }))]}
+          />
         </div>
 
         <div className="flex items-end sm:col-span-2 lg:col-span-2">

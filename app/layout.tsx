@@ -7,13 +7,33 @@ import AssistantFab from "@/components/ai/AssistantFab";
 import Navbar from "@/components/layout/Navbar";
 import SplashScreen, { splashScript } from "@/components/layout/SplashScreen";
 import { Toaster } from "@/components/ui/sonner";
+import { CREATOR, SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/site";
 
 // Timetable-style type, used by the departures board.
 const board = Chivo_Mono({ subsets: ["latin"], variable: "--font-board", display: "swap" });
 
+// Link previews (LinkedIn, Messenger, X, Slack) read these tags. The preview image
+// itself comes from app/opengraph-image.tsx, which Next wires in automatically.
 export const metadata: Metadata = {
-  title: { default: "Jetour", template: "%s · Jetour" },
-  description: "Search and book flights with Jetour.",
+  metadataBase: new URL(SITE_URL),
+  title: { default: `${SITE_NAME} · ${SITE_TAGLINE}`, template: `%s · ${SITE_NAME}` },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  authors: [{ name: CREATOR.name, url: CREATOR.linkedin }],
+  creator: CREATOR.name,
+  keywords: ["flight booking", "Next.js", "React", "TypeScript", "MongoDB", "case study"],
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    title: `${SITE_NAME} · ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
+    locale: "en_PH",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${SITE_NAME} · ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
+  },
 };
 
 export const viewport: Viewport = {
