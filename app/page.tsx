@@ -1,3 +1,4 @@
+import DepartureBoard from "@/components/home/DepartureBoard";
 import Cabins from "@/components/home/Cabins";
 import Faq from "@/components/home/Faq";
 import FeaturedFares from "@/components/home/FeaturedFares";
@@ -26,6 +27,7 @@ export default async function Home() {
       <main>
         <Hero airports={airports} />
         <NetworkStats network={network} />
+        <DepartureBoard flights={network.upcoming} />
         <PopularRoutes network={network} />
         <FeaturedFares flights={network.cheapest} />
         <WhyJetour />

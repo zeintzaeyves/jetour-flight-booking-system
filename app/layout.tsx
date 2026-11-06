@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Chivo_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 
 import "./globals.css";
@@ -6,6 +7,9 @@ import AssistantFab from "@/components/ai/AssistantFab";
 import Navbar from "@/components/layout/Navbar";
 import SplashScreen, { splashScript } from "@/components/layout/SplashScreen";
 import { Toaster } from "@/components/ui/sonner";
+
+// Timetable-style type, used by the departures board.
+const board = Chivo_Mono({ subsets: ["latin"], variable: "--font-board", display: "swap" });
 
 export const metadata: Metadata = {
   title: { default: "Jetour", template: "%s · Jetour" },
@@ -27,7 +31,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang="en" className={`dark ${board.variable}`} suppressHydrationWarning>
       <body>
         <script dangerouslySetInnerHTML={{ __html: splashScript }} />
         <SplashScreen />

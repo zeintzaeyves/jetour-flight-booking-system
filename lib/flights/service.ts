@@ -29,6 +29,8 @@ export type NetworkSummary = {
   /** Cheapest bookable fare per destination code. */
   fromPrice: Record<string, number>;
   cheapest: FlightType[];
+  /** The next bookable departures in time order, for the departures board. */
+  upcoming: FlightType[];
   /** Bookable departures and distinct directed routes, for the landing-page stats. */
   flightCount: number;
   routeCount: number;
@@ -64,12 +66,15 @@ export async function getNetworkSummary(): Promise<NetworkSummary> {
           return all.findIndex((g) => `${g.originCode}-${g.destinationCode}` === key) === i;
         })
         .slice(0, 6),
+      upcoming: [...flights]
+        .sort((a, b) => `${a.departureDate} ${a.departureTime}`.localeCompare(`${b.departureDate} ${b.departureTime}`))
+        .slice(0, 8),
       flightCount: flights.length,
       routeCount: new Set(flights.map((f) => `${f.originCode}-${f.destinationCode}`)).size,
     };
   } catch (error) {
     console.error("NETWORK_SUMMARY_ERROR:", error);
-    return { origins: [], destinations: [], fromPrice: {}, cheapest: [], flightCount: 0, routeCount: 0 };
+    return { origins: [], destinations: [], fromPrice: {}, cheapest: [], upcoming: [], flightCount: 0, routeCount: 0 };
   }
 }
 
