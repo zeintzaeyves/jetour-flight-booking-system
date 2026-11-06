@@ -1,31 +1,5 @@
 import { Container, Section } from "@/components/layout/Container";
-
-const QUESTIONS = [
-  [
-    "Do I need an account to book?",
-    "No. Enter passenger details and you get a booking reference straight away.",
-  ],
-  [
-    "Is payment taken when I reserve?",
-    "No. Jetour is a reservation demo, so no payment is collected and no card details are asked for.",
-  ],
-  [
-    "How do I find or cancel a booking?",
-    "Open Manage booking and enter your reference and the email used. From there you can view or cancel it.",
-  ],
-  [
-    "Can I change a booking?",
-    "Not directly. Cancel the reservation and book the flight you want instead.",
-  ],
-  [
-    "Can I book a round trip?",
-    "Yes. Each direction is reserved as its own booking, so you can pick different times for each.",
-  ],
-  [
-    "Are these real airline flights?",
-    "No. The flights, carriers and fares on this site are sample data for demonstration.",
-  ],
-] as const;
+import { FAQ } from "@/lib/content/faq";
 
 export default function Faq() {
   return (
@@ -36,7 +10,7 @@ export default function Faq() {
           <h2 className="text-headline text-balance">Questions, answered</h2>
         </div>
         <div className="divide-y divide-border border-y border-border">
-          {QUESTIONS.map(([q, a]) => (
+          {FAQ.map(([q, a]) => (
             <details key={q} className="group py-5">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-base font-medium [&::-webkit-details-marker]:hidden">
                 {q}

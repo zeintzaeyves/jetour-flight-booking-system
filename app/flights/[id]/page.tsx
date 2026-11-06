@@ -146,7 +146,7 @@ export default async function FlightDetailsPage({ params }: PageProps) {
                   </>
                 )}
                 <p className="mt-4 text-xs leading-5 text-muted-foreground">
-                  No payment is collected online. Seats are reserved under a booking reference.
+                  Pay online or in person (demo payment, nothing is charged). Seats are reserved under a booking reference.
                 </p>
               </div>
             </aside>

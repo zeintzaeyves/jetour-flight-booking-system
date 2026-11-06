@@ -9,21 +9,23 @@ export default function NetworkStats({ network }: { network: NetworkSummary }) {
   const stats = [
     [String(network.destinations.length), "Destinations"],
     [String(network.routeCount), "Routes"],
-    [String(network.flightCount), "Upcoming flights"],
+    [String(network.flightCount), "Flights"],
     [formatPeso(Math.min(...fares)), "Lowest fare"],
   ] as const;
 
   return (
-    <section aria-label="Network at a glance" className="border-y border-border bg-surface">
+    <section aria-label="Network at a glance" className="py-14 sm:py-20">
       <Container>
-        <dl className="grid grid-cols-2 gap-y-6 py-8 sm:py-10 lg:grid-cols-4">
-          {stats.map(([value, label]) => (
-            <div
-              key={label}
-              className="px-2 text-center lg:border-l lg:border-border lg:first:border-l-0"
-            >
-              <dd className="text-headline tabular-nums">{value}</dd>
-              <dt className="mt-1.5 text-sm text-muted-foreground">{label}</dt>
+        <dl className="grid grid-cols-2 gap-x-8 gap-y-12 lg:grid-cols-4">
+          {stats.map(([value, label], i) => (
+            <div key={label} className="border-t border-white/25 pt-4">
+              <dt className="flex items-baseline justify-between text-[0.6875rem] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                {label}
+                <span aria-hidden className="tabular-nums">0{i + 1}</span>
+              </dt>
+              <dd className="mt-6 text-5xl font-light leading-none tracking-tighter tabular-nums sm:text-6xl">
+                {value}
+              </dd>
             </div>
           ))}
         </dl>

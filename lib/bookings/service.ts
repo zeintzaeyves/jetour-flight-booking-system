@@ -5,6 +5,7 @@ import Flight from "@/models/Flight";
 import type { BookingInput } from "@/lib/validation/booking";
 
 import { computeTotal } from "./pricing";
+import { paymentStatusFor } from "./payment";
 import { generateBookingReference } from "./reference";
 import { SEAT_HOLDING, canTransition, type BookingStatus } from "./status";
 
@@ -15,8 +16,8 @@ const MAX_REFERENCE_ATTEMPTS = 5;
  * (never read-then-write), so concurrent requests cannot oversell a flight.
  * If the booking insert fails the seats are released.
  *
- * NOTE: There is no payment integration. Bookings are recorded as "Confirmed"
- * as before; this is a reservation record, not a paid ticket.
+ * NOTE: Payment is a mock. The chosen method and a derived status are recorded
+ * but no money moves and no card details are ever received.
  */
 export async function createBooking(input: BookingInput) {
   await connectDB();
@@ -80,6 +81,9 @@ export async function createBooking(input: BookingInput) {
         departureTime: flight.departureTime,
         totalAmount: computeTotal(flight.price, input.passengers),
         status: "Confirmed",
+        paymentMethod: input.paymentMethod,
+        paymentStatus: paymentStatusFor(input.paymentMethod),
+        paidAt: paymentStatusFor(input.paymentMethod) === "Paid" ? new Date() : undefined,
         idempotencyKey: input.idempotencyKey,
       });
       return { booking, created: true };
@@ -171,4 +175,26 @@ export async function changeBookingStatus(
     );
   }
   return updated;
+}
+
+/**
+ * Staff confirm that an in-person payment was received. This is the only way a
+ * "Pay later" booking becomes "Paid", which is what unlocks its e-ticket.
+ * Compare-and-set, so it can't be applied twice or to a cancelled booking.
+ */
+export async function markBookingPaid(reference: string) {
+  await connectDB();
+  const updated = await Booking.findOneAndUpdate(
+    { bookingReference: reference, status: { $ne: "Cancelled" }, paymentStatus: { $ne: "Paid" } },
+    { paymentStatus: "Paid", paidAt: new Date() },
+    { new: true }
+  );
+  if (updated) return updated;
+
+  const current = await Booking.findOne({ bookingReference: reference });
+  if (!current) throw new ApiError(404, "BOOKING_NOT_FOUND", "Booking not found.");
+  if (current.status === "Cancelled") {
+    throw new ApiError(409, "BOOKING_CANCELLED", "A cancelled booking can't be marked as paid.");
+  }
+  throw new ApiError(409, "ALREADY_PAID", "This booking is already marked as paid.");
 }

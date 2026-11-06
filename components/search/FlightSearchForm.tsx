@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeftRight, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { CABINS } from "@/lib/flights/search";
@@ -74,14 +74,6 @@ export default function FlightSearchForm({
   const options = airports.length ? airports : FALLBACK_AIRPORTS;
   const compact = variant === "compact";
 
-  // `min` depends on the visitor's local date, so set it after mount to avoid a
-  // server/client mismatch around midnight.
-  useEffect(() => {
-    const today = localToday();
-    formRef.current
-      ?.querySelectorAll<HTMLInputElement>('input[type="date"]')
-      .forEach((el) => (el.min = today));
-  }, []);
 
   const set = <K extends keyof SearchFormValues>(k: K, v: SearchFormValues[K]) => {
     setValues((prev) => ({ ...prev, [k]: v }));
@@ -244,11 +236,11 @@ export default function FlightSearchForm({
 
         <div>
           <Label htmlFor={id("date")} className="mb-1.5">Depart</Label>
-          <Input
+          <DatePicker
             id={id("date")}
-            type="date"
+            min="today"
             value={values.date}
-            onChange={(e) => set("date", e.target.value)}
+            onChange={(v) => set("date", v)}
             {...a11y("date", "date")}
           />
           {fieldError("date", "date")}
@@ -261,12 +253,12 @@ export default function FlightSearchForm({
           >
             Return
           </Label>
-          <Input
+          <DatePicker
             id={id("return")}
-            type="date"
+            min={values.date || "today"}
             value={values.returnDate}
             disabled={values.trip === "oneway"}
-            onChange={(e) => set("returnDate", e.target.value)}
+            onChange={(v) => set("returnDate", v)}
             {...a11y("returnDate", "return")}
           />
           {fieldError("returnDate", "return")}

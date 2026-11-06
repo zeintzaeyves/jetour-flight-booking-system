@@ -79,3 +79,8 @@ export async function getFlightByNo(flightNo: string): Promise<FlightType | null
   const doc = await Flight.findOne({ flightNo: flightNo.toUpperCase() }).lean();
   return doc ? JSON.parse(JSON.stringify(doc)) : null;
 }
+
+/** Every bookable flight, for building derived views such as the AI planner's route catalog. */
+export async function getBookableFlights(): Promise<FlightType[]> {
+  return loadBookable(1);
+}

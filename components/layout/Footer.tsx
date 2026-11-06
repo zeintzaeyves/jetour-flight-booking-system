@@ -92,7 +92,7 @@ export default function Footer() {
 
         <div className="mt-14 flex flex-col gap-2 border-t border-white/10 py-6 text-sm text-foreground/55 sm:flex-row sm:justify-between">
           <p>© 2026 Zein Khalid Bulaclac. All rights reserved.</p>
-          <p>Demo project: sample flights and fares. No payments are taken.</p>
+          <p>Demo project: sample flights and fares. Payments are simulated.</p>
         </div>
       </Container>
 

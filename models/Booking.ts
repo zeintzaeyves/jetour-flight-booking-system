@@ -91,6 +91,23 @@ const BookingSchema = new Schema(
       default: "Pending",
     },
 
+    // Mock payment: no money moves. Online methods are recorded as Paid, in-person as Pay later.
+    paymentMethod: {
+      type: String,
+      enum: ["Card", "GCash", "Maya", "Airport counter", "Jetour office"],
+      default: "Airport counter",
+    },
+
+    paymentStatus: {
+      type: String,
+      enum: ["Paid", "Pay later"],
+      default: "Pay later",
+    },
+
+    paidAt: {
+      type: Date,
+    },
+
     // Additive: names of travellers other than the lead passenger.
     additionalPassengers: {
       type: [String],

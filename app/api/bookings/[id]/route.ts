@@ -1,8 +1,8 @@
 import { requireAdmin } from "@/lib/auth/admin";
 import { ApiError, handleError, ok } from "@/lib/api/response";
-import { changeBookingStatus } from "@/lib/bookings/service";
+import { changeBookingStatus, markBookingPaid } from "@/lib/bookings/service";
 import { connectDB } from "@/lib/mongodb";
-import { bookingStatusPatchSchema } from "@/lib/validation/booking";
+import { bookingPaymentPatchSchema, bookingStatusPatchSchema } from "@/lib/validation/booking";
 import Booking from "@/models/Booking";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -31,7 +31,13 @@ export async function PATCH(request: Request, context: RouteContext) {
   try {
     await requireAdmin();
     const { id } = await context.params;
-    const { status } = bookingStatusPatchSchema.parse(await request.json());
+    const body = await request.json();
+    if (body && typeof body === "object" && "paymentStatus" in body) {
+      bookingPaymentPatchSchema.parse(body);
+      const paid = await markBookingPaid(id.toUpperCase());
+      return ok(paid, 200, "Payment recorded. The e-ticket is now available.");
+    }
+    const { status } = bookingStatusPatchSchema.parse(body);
     const booking = await changeBookingStatus(id.toUpperCase(), status);
     return ok(booking, 200, "Booking updated successfully.");
   } catch (error) {

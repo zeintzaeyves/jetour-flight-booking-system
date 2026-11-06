@@ -34,18 +34,20 @@ export default function AdminBookingsTable({ bookings }: { bookings: AdminBookin
   const [busyRef, setBusyRef] = useState<string | null>(null);
   const [pending, setPending] = useState<Pending>(null);
 
-  async function run(b: AdminBooking, action: "confirm" | "cancel" | "delete") {
+  async function run(b: AdminBooking, action: "confirm" | "cancel" | "delete" | "paid") {
     setBusyRef(b.bookingReference);
     const url = `/api/bookings/${encodeURIComponent(b.bookingReference)}`;
     const result =
       action === "delete"
         ? await adminRequest(url, "DELETE")
-        : await adminRequest(url, "PATCH", { status: action === "confirm" ? "Confirmed" : "Cancelled" });
+        : action === "paid"
+          ? await adminRequest(url, "PATCH", { paymentStatus: "Paid" })
+          : await adminRequest(url, "PATCH", { status: action === "confirm" ? "Confirmed" : "Cancelled" });
     setBusyRef(null);
     setPending(null);
     if (result.ok) {
       toast.success(
-        action === "delete" ? "Booking deleted." : action === "confirm" ? "Booking confirmed." : "Booking cancelled. Seats released."
+        action === "delete" ? "Booking deleted." : action === "paid" ? "Payment recorded. E-ticket unlocked." : action === "confirm" ? "Booking confirmed." : "Booking cancelled. Seats released."
       );
       router.refresh();
     } else if (result.status === 401) {
@@ -66,7 +68,7 @@ export default function AdminBookingsTable({ bookings }: { bookings: AdminBookin
   return (
     <>
       <div className="overflow-x-auto rounded-[1.75rem] border border-border bg-card shadow-card">
-        <Table className="min-w-[56rem]">
+        <Table className="min-w-[64rem]">
           <TableHeader>
             <TableRow>
               <TableHead>Reference</TableHead>
@@ -75,6 +77,7 @@ export default function AdminBookingsTable({ bookings }: { bookings: AdminBookin
               <TableHead className="text-right">Pax</TableHead>
               <TableHead className="text-right">Total</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Payment</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -100,11 +103,20 @@ export default function AdminBookingsTable({ bookings }: { bookings: AdminBookin
                   <TableCell className="text-right tabular-nums">{b.passengers}</TableCell>
                   <TableCell className="text-right tabular-nums">{formatPeso(b.totalAmount)}</TableCell>
                   <TableCell><StatusBadge status={b.status} /></TableCell>
+                  <TableCell>
+                    <div className="text-sm">{b.paymentStatus === "Paid" ? "Paid" : "Pay later"}</div>
+                    <div className="text-xs text-muted-foreground">{b.paymentMethod ?? "Airport counter"}</div>
+                  </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       {b.status === "Pending" ? (
                         <Button size="sm" variant="outline" disabled={busy} onClick={() => run(b, "confirm")}>
                           Confirm
+                        </Button>
+                      ) : null}
+                      {b.status !== "Cancelled" && b.paymentStatus !== "Paid" ? (
+                        <Button size="sm" variant="brand" disabled={busy} onClick={() => run(b, "paid")}>
+                          Mark paid
                         </Button>
                       ) : null}
                       {b.status !== "Cancelled" ? (

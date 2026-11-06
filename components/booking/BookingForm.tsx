@@ -1,5 +1,8 @@
 "use client";
 
+import AskAboutFlight from "@/components/ai/AskAboutFlight";
+import EwalletDialog from "@/components/booking/EwalletDialog";
+import BookingOverlay from "@/components/layout/BookingOverlay";
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -13,6 +16,13 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { computeTotal } from "@/lib/bookings/pricing";
 import {
+  IN_PERSON_PAYMENT_METHODS,
+  ONLINE_PAYMENT_METHODS,
+  PAYMENT_LABELS,
+  isOnlineMethod,
+  type PaymentMethod,
+} from "@/lib/bookings/payment";
+import {
   rememberBooking,
   saveConfirmation,
 } from "@/lib/bookings/clientStore";
@@ -23,6 +33,7 @@ import {
   MAX_PASSENGERS,
   SEAT_PREFERENCES,
   bookingInputSchema,
+  type BookingInput,
 } from "@/lib/validation/booking";
 import type { Flight } from "@/types/flight";
 
@@ -79,11 +90,18 @@ export default function BookingForm({
   const [others, setOthers] = useState<string[]>([]);
   const [seatPreference, setSeatPreference] = useState<string>(SEAT_PREFERENCES[0]);
   const [specialRequest, setSpecialRequest] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("Card");
+  // Mock card fields: validated for realism, never sent anywhere.
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardExpiry, setCardExpiry] = useState("");
+  const [cardCvc, setCardCvc] = useState("");
+  const [walletOpen, setWalletOpen] = useState(false);
+  const pendingData = useRef<BookingInput | null>(null);
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // One key per form instance: retries and double-clicks cannot create two bookings.
-  const idempotencyKey = useRef(crypto.randomUUID());
+  const [idempotencyKey] = useState(() => crypto.randomUUID());
 
   const total = computeTotal(flight.price, passengers);
   const date = normalizeDate(flight.departureDate);
@@ -121,27 +139,49 @@ export default function BookingForm({
       ),
       seatPreference,
       specialRequest,
-      idempotencyKey: idempotencyKey.current,
+      paymentMethod,
+      idempotencyKey: idempotencyKey,
     });
 
+    const found: Errors = {};
     if (!parsed.success) {
-      const found: Errors = {};
       for (const issue of parsed.error.issues) {
         const key = fromPath(issue.path);
         found[key] ||= issue.message;
       }
+    }
+    if (paymentMethod === "Card") {
+      if (cardNumber.replace(/\s/g, "").length < 13 || !/^\d+$/.test(cardNumber.replace(/\s/g, ""))) {
+        found.cardNumber = "Enter a valid card number";
+      }
+      if (!/^(0[1-9]|1[0-2])\s?\/\s?\d{2}$/.test(cardExpiry.trim())) found.cardExpiry = "Use MM/YY";
+      if (!/^\d{3,4}$/.test(cardCvc.trim())) found.cardCvc = "Enter the 3 or 4 digit code";
+    }
+    if (!parsed.success || Object.keys(found).length) {
       setErrors(found);
       focusFirst(found);
       return;
     }
     setErrors({});
+    // E-wallets get a checkout step (scan QR / enter details) before the booking is placed.
+    if (paymentMethod === "GCash" || paymentMethod === "Maya") {
+      pendingData.current = parsed.data;
+      setWalletOpen(true);
+      return;
+    }
+    await place(parsed.data);
+  }
+
+  async function place(data: BookingInput) {
     setBusy(true);
 
     try {
+      // Simulated payment approval for online methods.
+      if (isOnlineMethod(paymentMethod)) await new Promise((r) => setTimeout(r, 1500));
       const res = await fetch("/api/bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(parsed.data),
+        body: JSON.stringify(data),
       });
       const result = await res.json();
 
@@ -160,6 +200,7 @@ export default function BookingForm({
         } else {
           setFormError(result?.message || "We couldn't complete your booking.");
         }
+        setBusy(false);
         return;
       }
 
@@ -168,11 +209,11 @@ export default function BookingForm({
       rememberBooking({ reference: booking.bookingReference, email: booking.email });
       toast.success("Booking confirmed.");
       router.push(`/booking/success?ref=${encodeURIComponent(booking.bookingReference)}`);
+      return; // keep the overlay up until the success page takes over
     } catch {
       setFormError("Network problem. Your booking was not placed. Please try again.");
-    } finally {
-      setBusy(false);
     }
+    setBusy(false);
   }
 
   const a11y = (key: string) => ({
@@ -183,6 +224,20 @@ export default function BookingForm({
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
+      <BookingOverlay show={busy} />
+      {paymentMethod === "GCash" || paymentMethod === "Maya" ? (
+        <EwalletDialog
+          open={walletOpen}
+          onOpenChange={setWalletOpen}
+          method={paymentMethod}
+          amount={total}
+          paymentRef={idempotencyKey.slice(0, 8).toUpperCase()}
+          onConfirm={() => {
+            setWalletOpen(false);
+            if (pendingData.current) void place(pendingData.current);
+          }}
+        />
+      ) : null}
       <form onSubmit={onSubmit} noValidate className="space-y-6">
         {formError ? (
           <div
@@ -278,16 +333,79 @@ export default function BookingForm({
           </Field>
         </fieldset>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <fieldset className="space-y-5 rounded-[1.75rem] border border-border bg-card p-5 shadow-card sm:p-6">
+          <legend className="sr-only">Payment</legend>
+          <h2 className="text-title">Payment</h2>
+          <div className="grid gap-5 sm:grid-cols-2">
+            {([
+              ["Pay online", ONLINE_PAYMENT_METHODS],
+              ["Pay in person", IN_PERSON_PAYMENT_METHODS],
+            ] as const).map(([group, methods]) => (
+              <div key={group} role="radiogroup" aria-label={group} className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">{group}</p>
+                {methods.map((m) => (
+                  <label
+                    key={m}
+                    className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 text-sm transition-colors ${
+                      paymentMethod === m ? "border-brand bg-white/5" : "border-border hover:bg-white/5"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value={m}
+                      checked={paymentMethod === m}
+                      onChange={() => setPaymentMethod(m)}
+                      className="accent-[var(--brand)]"
+                    />
+                    {PAYMENT_LABELS[m]}
+                  </label>
+                ))}
+              </div>
+            ))}
+          </div>
+
+          {paymentMethod === "Card" ? (
+            <div className="space-y-4 border-t border-border pt-5">
+              <Field {...{ id: "f-cardNumber", label: "Card number", error: errors.cardNumber }}>
+                <Input {...a11y("cardNumber")} inputMode="numeric" autoComplete="off" placeholder="4242 4242 4242 4242" value={cardNumber}
+                  onChange={(e) => { setCardNumber(e.target.value); clear("cardNumber"); }} />
+              </Field>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field {...{ id: "f-cardExpiry", label: "Expiry (MM/YY)", error: errors.cardExpiry }}>
+                  <Input {...a11y("cardExpiry")} inputMode="numeric" autoComplete="off" placeholder="12/29" value={cardExpiry}
+                    onChange={(e) => { setCardExpiry(e.target.value); clear("cardExpiry"); }} />
+                </Field>
+                <Field {...{ id: "f-cardCvc", label: "CVC", error: errors.cardCvc }}>
+                  <Input {...a11y("cardCvc")} inputMode="numeric" autoComplete="off" placeholder="123" value={cardCvc}
+                    onChange={(e) => { setCardCvc(e.target.value); clear("cardCvc"); }} />
+                </Field>
+              </div>
+            </div>
+          ) : null}
+
           <p className="flex items-start gap-2 text-sm text-muted-foreground">
             <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
             <span>
-              No payment is collected online. Your seats are reserved straight away under a booking
-              reference, and you can cancel any time from Manage booking.
+              {isOnlineMethod(paymentMethod)
+                ? paymentMethod === "Card"
+                  ? "This is a demo: the payment is simulated, nothing is charged, and card details never leave your browser."
+                  : `Next you will scan a QR code or enter your ${paymentMethod} details. Your e-ticket is issued once payment is confirmed. Demo only: nothing is charged.`
+                : paymentMethod === "Airport counter"
+                  ? "Pay at the Jetour counter at the airport before check-in. Your seats are reserved now."
+                  : "Pay at any Jetour office before your flight. Your seats are reserved now."}{" "}
+              You can cancel any time from Manage booking.
             </span>
           </p>
+        </fieldset>
+
+        <div className="flex justify-end">
           <Button type="submit" variant="brand" size="lg" disabled={busy} className="sm:min-w-52">
-            {busy ? "Confirming…" : `Confirm booking · ${formatPeso(total)}`}
+            {busy
+              ? isOnlineMethod(paymentMethod) ? "Processing payment…" : "Confirming…"
+              : isOnlineMethod(paymentMethod)
+                ? paymentMethod === "Card" ? `Pay ${formatPeso(total)}` : `Continue to ${paymentMethod} · ${formatPeso(total)}`
+                : `Confirm booking · ${formatPeso(total)}`}
           </Button>
         </div>
       </form>
@@ -343,6 +461,7 @@ export default function BookingForm({
               Fares are all-inclusive, per passenger, in Philippine pesos.
             </p>
           </div>
+          <AskAboutFlight flightNo={flight.flightNo} />
         </div>
       </aside>
     </div>

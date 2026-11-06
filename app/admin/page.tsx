@@ -74,7 +74,7 @@ export default async function AdminPage() {
           accent
           label="Booked value"
           value={formatPeso(s.bookedValue)}
-          note="Reservations only. No payments are collected."
+          note="Reservation value. Payments are simulated, no money is collected."
         />
         <Stat
           label="Bookings"

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { SearchX, TriangleAlert } from "lucide-react";
 
+import AiPicks from "@/components/ai/AiPicks";
+import NlSearchBar from "@/components/ai/NlSearchBar";
 import FilterPanel from "@/components/flights/FilterPanel";
 import FlightCard from "@/components/flights/FlightCard";
 import Footer from "@/components/layout/Footer";
@@ -69,6 +71,7 @@ export default async function FlightsPage({ searchParams }: PageProps) {
     <>
       <main className="min-h-screen bg-surface pb-20 pt-24">
         <Container className="space-y-6">
+          <NlSearchBar />
           {/* Mobile: collapsed summary so results are visible without scrolling. */}
           <details className="group rounded-[1.75rem] border border-border bg-card shadow-card lg:hidden">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3.5 text-sm [&::-webkit-details-marker]:hidden">
@@ -239,9 +242,12 @@ export default async function FlightsPage({ searchParams }: PageProps) {
                     </div>
                   </Panel>
                 ) : (
-                  search.data.results.map((f) => (
-                    <FlightCard key={f._id} flight={f} passengers={requested.passengers} />
-                  ))
+                  <>
+                    {search.data.results.length > 1 ? <AiPicks queryString={toQueryString(requested)} /> : null}
+                    {search.data.results.map((f) => (
+                      <FlightCard key={f._id} flight={f} passengers={requested.passengers} />
+                    ))}
+                  </>
                 )}
               </section>
             </div>

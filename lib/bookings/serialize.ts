@@ -15,6 +15,8 @@ export type PublicBooking = {
   seatPreference: string;
   specialRequest: string;
   totalAmount: number;
+  paymentMethod: string;
+  paymentStatus: "Paid" | "Pay later";
   createdAt: string;
 };
 
@@ -44,6 +46,8 @@ export function toPublicBooking(doc: Source): PublicBooking {
     seatPreference: String(d.seatPreference),
     specialRequest: String(d.specialRequest ?? ""),
     totalAmount: Number(d.totalAmount),
+    paymentMethod: String(d.paymentMethod ?? "Airport counter"),
+    paymentStatus: d.paymentStatus === "Paid" ? "Paid" : "Pay later",
     createdAt: d.createdAt ? new Date(d.createdAt as string | Date).toISOString() : "",
   };
 }

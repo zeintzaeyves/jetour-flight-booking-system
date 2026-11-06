@@ -1,5 +1,6 @@
 "use client";
 
+import { DatePicker } from "@/components/ui/date-picker";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -155,7 +156,7 @@ export default function FlightFormDialog({
               <Input {...err("destinationCode")} defaultValue={flight?.destinationCode} placeholder="NRT" maxLength={3} className="uppercase" />
             </Field>
             <Field name="departureDate" label="Departure date" error={errors.departureDate}>
-              <Input {...err("departureDate")} type="date" defaultValue={flight?.departureDate} />
+              <DatePicker {...err("departureDate")} defaultValue={flight?.departureDate} />
             </Field>
             <Field name="departureTime" label="Departure time" error={errors.departureTime}>
               <Input {...err("departureTime")} type="time" defaultValue={flight?.departureTime} />

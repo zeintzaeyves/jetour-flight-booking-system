@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { PAYMENT_METHODS } from "@/lib/bookings/payment";
+
 export const SEAT_PREFERENCES = [
   "Window seat",
   "Aisle seat",
@@ -35,6 +37,8 @@ export const bookingInputSchema = z
     additionalPassengers: z.array(personName).max(MAX_PASSENGERS - 1).default([]),
     seatPreference: z.enum(SEAT_PREFERENCES).default("Window seat"),
     specialRequest: z.string().trim().max(500).default(""),
+    /** Mock payment method. The server derives the payment status from it. */
+    paymentMethod: z.enum(PAYMENT_METHODS).default("Airport counter"),
     /** Client-generated UUID so retries/double-clicks never double-book. */
     idempotencyKey: z.string().trim().min(16).max(64).optional(),
   })
@@ -60,6 +64,11 @@ export const bookingLookupSchema = z.object({
 
 export const bookingStatusPatchSchema = z
   .object({ status: z.enum(BOOKING_STATUSES) })
+  .strict();
+
+/** Admin: staff confirm an in-person payment was received. */
+export const bookingPaymentPatchSchema = z
+  .object({ paymentStatus: z.literal("Paid") })
   .strict();
 
 export type BookingInput = z.infer<typeof bookingInputSchema>;

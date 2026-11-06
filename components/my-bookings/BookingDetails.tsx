@@ -1,5 +1,6 @@
 import BookingTicket from "@/components/booking/BookingTicket";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { PAYMENT_LABELS, type PaymentMethod } from "@/lib/bookings/payment";
 import type { PublicBooking } from "@/lib/bookings/serialize";
 import { normalizeDate } from "@/lib/flights/search";
 import { formatDateShort, formatPeso, formatTime12 } from "@/lib/format";
@@ -27,8 +28,21 @@ export default function BookingDetails({
 
   return (
     <div className="space-y-8">
-    {/* A ticket exists only once the booking is confirmed. */}
-    {booking.status === "Confirmed" ? <BookingTicket booking={booking} /> : null}
+    {/* A ticket exists only once the booking is confirmed AND paid. */}
+    {booking.status === "Confirmed" && booking.paymentStatus === "Paid" ? <BookingTicket booking={booking} /> : null}
+    {booking.status === "Confirmed" && booking.paymentStatus !== "Paid" ? (
+      <section aria-label="Payment pending" className="rounded-[1.75rem] border border-dashed border-white/25 bg-card p-6 text-center shadow-card sm:p-8">
+        <p className="text-eyebrow text-muted-foreground">E-ticket locked</p>
+        <h2 className="mt-2 text-title">Pay to unlock your e-ticket</h2>
+        <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
+          Your seats are reserved. Bring reference{" "}
+          <span className="font-semibold tracking-wider text-foreground">{booking.bookingReference}</span> and pay{" "}
+          <span className="font-semibold text-foreground">{formatPeso(booking.totalAmount, true)}</span>{" "}
+          {booking.paymentMethod === "Jetour office" ? "at a Jetour office" : "at the Jetour airport counter"}.
+          Once our staff record your payment, your e-ticket appears here. Open Manage booking again to see it.
+        </p>
+      </section>
+    ) : null}
     <section
       aria-label={`Booking ${booking.bookingReference}`}
       className="rounded-[1.75rem] border border-border bg-card shadow-card"
@@ -79,7 +93,14 @@ export default function BookingDetails({
             <span className={`font-semibold tabular-nums ${cancelled ? "line-through" : ""}`}>
               {formatPeso(booking.totalAmount, true)}
             </span>
-            <span className="ml-2 text-muted-foreground">No online payment collected</span>
+          </Row>
+          <Row label="Payment">
+            {booking.paymentStatus === "Paid" ? "Paid" : "Pay later"}
+            <span className="ml-2 text-muted-foreground">
+              {booking.paymentStatus === "Paid"
+                ? `via ${PAYMENT_LABELS[booking.paymentMethod as PaymentMethod] ?? booking.paymentMethod} (demo, nothing charged)`
+                : (PAYMENT_LABELS[booking.paymentMethod as PaymentMethod] ?? booking.paymentMethod)}
+            </span>
           </Row>
         </dl>
       </div>

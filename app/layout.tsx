@@ -2,7 +2,9 @@ import type { Metadata, Viewport } from "next";
 import { ThemeProvider } from "next-themes";
 
 import "./globals.css";
+import AssistantFab from "@/components/ai/AssistantFab";
 import Navbar from "@/components/layout/Navbar";
+import SplashScreen, { splashScript } from "@/components/layout/SplashScreen";
 import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
@@ -27,6 +29,8 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
       <body>
+        <script dangerouslySetInnerHTML={{ __html: splashScript }} />
+        <SplashScreen />
         {/* The site is dark-only (the original Jetour look). */}
         <ThemeProvider
           attribute="class"
@@ -44,7 +48,8 @@ export default function RootLayout({
           <div id="main-content" tabIndex={-1} className="outline-none">
             {children}
           </div>
-          <Toaster richColors position="bottom-right" />
+          <AssistantFab />
+          <Toaster richColors position="bottom-center" />
         </ThemeProvider>
       </body>
     </html>

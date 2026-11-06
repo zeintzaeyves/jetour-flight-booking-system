@@ -25,7 +25,7 @@ vi.mock("@/models/Booking", () => ({
   },
 }));
 
-const { createBooking, changeBookingStatus, lookupBooking } = await import(
+const { createBooking, changeBookingStatus, lookupBooking, markBookingPaid } = await import(
   "@/lib/bookings/service"
 );
 
@@ -38,6 +38,7 @@ const input = {
   additionalPassengers: ["Maria Dela Cruz"],
   seatPreference: "Window seat" as const,
   specialRequest: "",
+  paymentMethod: "Airport counter" as const,
   idempotencyKey: "0123456789abcdef0123",
 };
 
@@ -144,5 +145,39 @@ describe("lookupBooking", () => {
   });
   it("404s with a generic message when nothing matches", async () => {
     await expect(lookupBooking("JT-X", "a@b.co")).rejects.toMatchObject({ status: 404 });
+  });
+});
+
+describe("mock payment", () => {
+  it("derives the status from the method", async () => {
+    const { paymentStatusFor } = await import("@/lib/bookings/payment");
+    expect(paymentStatusFor("Card")).toBe("Paid");
+    expect(paymentStatusFor("GCash")).toBe("Paid");
+    expect(paymentStatusFor("Airport counter")).toBe("Pay later");
+    expect(paymentStatusFor("Jetour office")).toBe("Pay later");
+  });
+});
+
+describe("markBookingPaid", () => {
+  it("only flips unpaid, non-cancelled bookings (compare-and-set)", async () => {
+    bookingFindOneAndUpdate.mockResolvedValue({ paymentStatus: "Paid" });
+    await markBookingPaid("JT-ABC12345");
+    const [filter, update] = bookingFindOneAndUpdate.mock.calls[0];
+    expect(filter).toMatchObject({
+      bookingReference: "JT-ABC12345",
+      status: { $ne: "Cancelled" },
+      paymentStatus: { $ne: "Paid" },
+    });
+    expect(update).toMatchObject({ paymentStatus: "Paid" });
+  });
+
+  it("refuses a cancelled booking and a double payment", async () => {
+    bookingFindOneAndUpdate.mockResolvedValue(null);
+    bookingFindOne.mockResolvedValueOnce({ status: "Cancelled" });
+    await expect(markBookingPaid("JT-X")).rejects.toMatchObject({ code: "BOOKING_CANCELLED" });
+    bookingFindOne.mockResolvedValueOnce({ status: "Confirmed", paymentStatus: "Paid" });
+    await expect(markBookingPaid("JT-X")).rejects.toMatchObject({ code: "ALREADY_PAID" });
+    bookingFindOne.mockResolvedValueOnce(null);
+    await expect(markBookingPaid("JT-X")).rejects.toMatchObject({ code: "BOOKING_NOT_FOUND" });
   });
 });

@@ -16,6 +16,8 @@ export type AdminBooking = {
   passengers: number;
   additionalPassengers?: string[];
   totalAmount: number;
+  paymentMethod?: string;
+  paymentStatus?: "Paid" | "Pay later";
   status: "Pending" | "Confirmed" | "Cancelled";
   createdAt: string;
 };
